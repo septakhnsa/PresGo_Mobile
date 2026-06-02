@@ -42,7 +42,7 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
   // STMIK Widya Utama Berkoh coordinates
   final double campusLat = -7.4449;
   final double campusLng = 109.2526;
-  final double maxRadius = 999999.0; // Large radius for demo
+  final double maxRadius = 16000.0; // Large radius for demo
 
   @override
   void initState() {
