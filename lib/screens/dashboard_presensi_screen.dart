@@ -86,60 +86,70 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Notification Ticker Card
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  )
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              "PresGo",
-                              style: TextStyle(
-                                color: AppColors.tosca,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11.5,
-                              ),
+            // Notification Ticker Card (Dynamic from JadwalService)
+            if (JadwalService.instance.notifications.any((n) => n['isActionable'] == true)) ...[
+              Builder(
+                builder: (context) {
+                  final activeNotif = JadwalService.instance.notifications.firstWhere((n) => n['isActionable'] == true);
+                  return GestureDetector(
+                    onTap: () => _navigateToCamera(JadwalService.instance.allJadwal.firstWhere((j) => j.mataKuliah == activeNotif['subjectName'])),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      "PresGo",
+                                      style: TextStyle(
+                                        color: AppColors.tosca,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 11.5,
+                                      ),
+                                    ),
+                                    Text(
+                                      " • ${activeNotif['timeText']} ",
+                                      style: const TextStyle(color: Colors.black26, fontSize: 11.5),
+                                    ),
+                                    Text(
+                                      activeNotif['headerText'],
+                                      style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 11.5),
+                                    ),
+                                    const Spacer(),
+                                    Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey.shade300, size: 10),
+                                  ],
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  "${activeNotif['bodyText']} >",
+                                  style: TextStyle(color: Colors.grey.shade700, fontSize: 12.5, fontWeight: FontWeight.w500),
+                                ),
+                              ],
                             ),
-                            const Text(
-                              " • Baru saja ",
-                              style: TextStyle(color: Colors.black26, fontSize: 11.5),
-                            ),
-                            const Text(
-                              "Pengingat Presensi",
-                              style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 11.5),
-                            ),
-                            const Spacer(),
-                            Icon(Icons.cancel_outlined, color: Colors.red.shade300, size: 14),
-                          ],
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          "Mobile Programming tinggal 15 Menit Lagi >",
-                          style: TextStyle(color: Colors.grey.shade700, fontSize: 12.5, fontWeight: FontWeight.w500),
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  );
+                }
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
 
             // Section: Rekap Kehadiran Bulan Ini (Black Text Title)
             const Text(
