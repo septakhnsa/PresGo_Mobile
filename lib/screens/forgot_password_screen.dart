@@ -951,12 +951,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             Navigator.pop(context);
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(
-              255,
-              10,
-              128,
-              57,
-            ), // Green button
+            backgroundColor: AppColors.tosca.withOpacity(0.24), // Green button
             foregroundColor: Colors.white,
             minimumSize: const Size(double.infinity, 50),
             shape: RoundedRectangleBorder(
