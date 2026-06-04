@@ -10,6 +10,8 @@ import 'history_screen.dart';
 import 'dashboard_presensi_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
+import '../services/jadwal_service.dart';
+import '../models/jadwal_model.dart';
 
 /// Returns e.g. "Rabu, 27 April 2026"
 String _formatDateId(DateTime d) {
@@ -42,6 +44,8 @@ class _MainNavigationState extends State<MainNavigation> {
   double _liveLat = -7.4372; // Default awal (kampus) sebelum GPS didapat
   double _liveLng = 109.2645;
   late MapController _mapController;
+  Timer? _clockTimer;
+  DateTime _now = DateTime.now();
 
   // Hitung jarak Haversine antara 2 koordinat (hasil dalam meter)
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -69,6 +73,20 @@ class _MainNavigationState extends State<MainNavigation> {
     super.initState();
     _mapController = MapController();
     _startLocationTracking();
+    
+    // Initial notification update
+    JadwalService.instance.updateNotifications(_now);
+    
+    // Timer for real-time clock updates every minute
+    _clockTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _now = DateTime.now();
+          // Update notifications every minute
+          JadwalService.instance.updateNotifications(_now);
+        });
+      }
+    });
   }
 
   Future<void> _startLocationTracking() async {
@@ -114,6 +132,7 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void dispose() {
     _positionStreamSubscription?.cancel();
+    _clockTimer?.cancel();
     super.dispose();
   }
 
@@ -378,79 +397,120 @@ class _MainNavigationState extends State<MainNavigation> {
         // 2. Real-time GPS Telemetry HUD Overlay
         _buildGpsTelemetryHUD(),
 
-        // 3. Top Floating Notification Card
+        // 4. Top Floating Status Card (Dynamic)
         Positioned(
           top: 16,
           left: 16,
           right: 16,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEF9C3),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.shade300, width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.07),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                )
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatDateId(DateTime.now()),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12.5,
-                          color: AppColors.textDark,
+          child: Builder(
+            builder: (context) {
+              final todaysJadwal = JadwalService.instance.getJadwalHariIni();
+              final now = _now;
+              
+              JadwalModel? activeJadwal;
+              bool isNext = false;
+
+              // 1. Find currently active class (not yet attended)
+              try {
+                activeJadwal = todaysJadwal.firstWhere((j) {
+                  final start = DateTime(now.year, now.month, now.day, int.parse(j.jamMulai.split(':')[0]), int.parse(j.jamMulai.split(':')[1]));
+                  final end = DateTime(now.year, now.month, now.day, int.parse(j.jamSelesai.split(':')[0]), int.parse(j.jamSelesai.split(':')[1]));
+                  return now.isAfter(start) && now.isBefore(end) && j.status != 'Sudah Absen';
+                });
+                isNext = false;
+              } catch (_) {
+                // 2. If no active, find next upcoming class (not yet attended)
+                try {
+                  activeJadwal = todaysJadwal.firstWhere((j) {
+                    final start = DateTime(now.year, now.month, now.day, int.parse(j.jamMulai.split(':')[0]), int.parse(j.jamMulai.split(':')[1]));
+                    return now.isBefore(start) && j.status != 'Sudah Absen';
+                  });
+                  isNext = true;
+                } catch (_) {
+                  activeJadwal = null;
+                }
+              }
+
+              if (activeJadwal == null) return const SizedBox.shrink();
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                decoration: BoxDecoration(
+                  color: isNext ? const Color(0xFFFEF9C3) : const Color(0xFFDCFCE7), // Yellow if next, Green if current
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isNext ? Colors.red.shade300 : Colors.green.shade300, width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.07),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            isNext ? "Jadwal Berikutnya" : "Sedang Berlangsung",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                              color: isNext ? Colors.red : Colors.green.shade800,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            activeJadwal.mataKuliah,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          Text(
+                            "${activeJadwal.jamMulai} - ${activeJadwal.jamSelesai} @ ${activeJadwal.ruangan}",
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const DashboardPresensiScreen()),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isNext ? const Color(0xFFFEF08A) : Colors.green.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: isNext ? Colors.red : Colors.green, width: 1),
+                        ),
+                        child: Text(
+                          "Detail",
+                          style: TextStyle(
+                            color: isNext ? Colors.red : Colors.green.shade900,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        "STMIK Widya Utama",
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const DashboardPresensiScreen()),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF08A),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red, width: 1),
                     ),
-                    child: const Text(
-                      "Lihat Absensi",
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            }
           ),
         ),
 
@@ -547,7 +607,7 @@ class _MainNavigationState extends State<MainNavigation> {
   // COMPONENT: Welcome Modal Overlay Card — scrollable so it never overflows on small screens
   Widget _buildWelcomeModal() {
     final String greeting = () {
-      final h = DateTime.now().hour;
+      final h = _now.hour;
       if (h < 11) return 'Selamat Pagi!';
       if (h < 15) return 'Selamat Siang!';
       if (h < 18) return 'Selamat Sore!';
@@ -584,7 +644,7 @@ class _MainNavigationState extends State<MainNavigation> {
                     children: [
                       Expanded(
                         child: Text(
-                          _formatDateId(DateTime.now()),
+                          _formatDateId(_now),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -742,40 +802,26 @@ class _MainNavigationState extends State<MainNavigation> {
             child: ListView(
               padding: const EdgeInsets.all(24),
               children: [
-                const Text(
-                  "senin, 27 april 2026",
-                  style: TextStyle(color: Colors.black38, fontSize: 13, fontWeight: FontWeight.bold),
+                Text(
+                  _formatDateId(_now).toLowerCase(),
+                  style: const TextStyle(color: Colors.black38, fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
 
-                // Card 1 (Active/Urgent Actionable)
-                _buildNotificationCard(
-                  isActionable: true,
-                  title: "PresGo",
-                  timeText: "Baru saja",
-                  headerText: "Pengingat Presensi",
-                  bodyText: "Kelas Mobile Programming dimulai 15 Menit lagi.",
-                ),
-                const SizedBox(height: 16),
-
-                // Card 2 (Hadir Success)
-                _buildNotificationCard(
-                  isActionable: false,
-                  title: "PresGo",
-                  timeText: "13.00",
-                  headerText: "Pengingat Presensi",
-                  bodyText: "Presensi Berhasil!\nMobile Programming tercatat hadir.",
-                ),
-                const SizedBox(height: 16),
-
-                // Card 3 (Hadir Success)
-                _buildNotificationCard(
-                  isActionable: false,
-                  title: "PresGo",
-                  timeText: "13.00",
-                  headerText: "Pengingat Presensi",
-                  bodyText: "Presensi Berhasil!\nMobile Programming tercatat hadir.",
-                ),
+                // Dynamic notification list from JadwalService
+                ...JadwalService.instance.notifications.map((notif) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _buildNotificationCard(
+                      isActionable: notif['isActionable'] ?? false,
+                      title: notif['title'] ?? 'PresGo',
+                      timeText: notif['timeText'] ?? 'Baru saja',
+                      headerText: notif['headerText'] ?? 'Notifikasi',
+                      bodyText: notif['bodyText'] ?? '',
+                      subjectName: notif['subjectName'],
+                    ),
+                  );
+                }).toList(),
               ],
             ),
           ),
@@ -821,8 +867,20 @@ class _MainNavigationState extends State<MainNavigation> {
     required String timeText,
     required String headerText,
     required String bodyText,
+    String? subjectName,
   }) {
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        if (isActionable) {
+          _navigateToCamera(subject: subjectName);
+        } else {
+          setState(() {
+            _showNotificationPage = false;
+            _activeTab = "History";
+          });
+        }
+      },
+      child: Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -934,7 +992,7 @@ class _MainNavigationState extends State<MainNavigation> {
                 const SizedBox(width: 24),
                 // "Presensi Sekarang" green button
                 ElevatedButton(
-                  onPressed: _navigateToCamera,
+                  onPressed: () => _navigateToCamera(subject: subjectName),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.tosca,
                     foregroundColor: Colors.white,
@@ -953,14 +1011,15 @@ class _MainNavigationState extends State<MainNavigation> {
           ]
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // FLOATING ACTION BUTTON: Camera on Home, Logout on others
   Widget _buildFloatingActionButton() {
     if (_activeTab == "Home") {
       return GestureDetector(
-        onTap: _navigateToCamera,
+        onTap: () => _navigateToCamera(),
         child: Container(
           width: 60,
           height: 60,
@@ -1062,11 +1121,11 @@ class _MainNavigationState extends State<MainNavigation> {
     }
   }
 
-  void _navigateToCamera() {
-    Navigator.push(
+  void _navigateToCamera({String? subject}) async {
+    final result = await Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const PresensiScreen(),
+        pageBuilder: (context, animation, secondaryAnimation) => PresensiScreen(initialSubject: subject),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return SlideTransition(
             position: Tween<Offset>(
@@ -1078,6 +1137,34 @@ class _MainNavigationState extends State<MainNavigation> {
         },
       ),
     );
+
+    if (result != null && result is Map && result['status'] == 'success') {
+      // Get subject from result if present
+      final className = result['className'] ?? subject ?? "Mobile Programming";
+      
+      // Update data via service
+      // We need to find the id for this subject
+      final allJadwal = JadwalService.instance.allJadwal;
+      final jadwal = allJadwal.firstWhere(
+        (j) => j.mataKuliah.toLowerCase().contains(className.toLowerCase()),
+        orElse: () => allJadwal.first,
+      );
+
+      setState(() {
+        JadwalService.instance.markHadir(jadwal.id, result['photoPath']);
+        // Refresh UI
+      });
+
+      // Show success snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Presensi $className Berhasil!"),
+            backgroundColor: AppColors.greenHadir,
+          ),
+        );
+      }
+    }
   }
 }
 

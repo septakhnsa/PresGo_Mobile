@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -6,9 +5,11 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:geolocator/geolocator.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_button.dart';
+import '../services/jadwal_service.dart';
 
 class PresensiScreen extends StatefulWidget {
-  const PresensiScreen({super.key});
+  final String? initialSubject;
+  const PresensiScreen({super.key, this.initialSubject});
 
   @override
   State<PresensiScreen> createState() => _PresensiScreenState();
@@ -18,14 +19,9 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
   late AnimationController _scannerController;
   late Animation<double> _scannerAnimation;
   bool _isVerifying = false;
-  String _selectedClass = "Mobile Programming";
+  late String _selectedClass;
   
-  final List<String> _classes = [
-    "Mobile Programming",
-    "Web Programming",
-    "Kecerdasan Buatan",
-    "Keamanan Jaringan",
-  ];
+  late List<String> _classes;
 
   CameraController? _cameraController;
   late FaceDetector _faceDetector;
@@ -47,6 +43,27 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
+
+    // 1. Get dynamic class list from JadwalService
+    _classes = JadwalService.instance.allJadwal
+        .map((j) => j.mataKuliah)
+        .toSet() // Remove duplicates
+        .toList();
+
+    // 2. Initialize with provided subject or default to the most relevant one
+    if (widget.initialSubject != null && _classes.any((c) => c.toLowerCase() == widget.initialSubject!.toLowerCase())) {
+      // Find the exact name from our list to avoid case sensitivity issues
+      _selectedClass = _classes.firstWhere((c) => c.toLowerCase() == widget.initialSubject!.toLowerCase());
+    } else {
+      // If no initial subject, try to find what's scheduled now
+      final today = JadwalService.instance.getJadwalHariIni();
+      if (today.isNotEmpty) {
+        _selectedClass = today[0].mataKuliah;
+      } else {
+        _selectedClass = _classes.isNotEmpty ? _classes[0] : "Mobile Programming";
+      }
+    }
+
     _scannerController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -64,85 +81,149 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
     bool serviceEnabled;
     LocationPermission permission;
 
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      debugPrint('Location services are disabled.');
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        debugPrint('Location permissions are denied');
+    try {
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _showLocationError('Layanan lokasi (GPS) tidak aktif.');
         return;
       }
-    }
-    
-    if (permission == LocationPermission.deniedForever) {
-      debugPrint('Location permissions are permanently denied.');
-      return;
-    } 
 
-    // Fetch initial position immediately so UI doesn't wait for stream to trigger
-    try {
-      final initialPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      if (mounted) {
-        final distance = Geolocator.distanceBetween(
-          initialPosition.latitude,
-          initialPosition.longitude,
-          campusLat,
-          campusLng,
-        );
-        setState(() {
-          _currentPosition = initialPosition;
-          _distanceFromCampus = distance;
-          _isLocationValid = distance <= maxRadius;
-        });
+      permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showLocationError('Izin lokasi ditolak.');
+          return;
+        }
       }
-    } catch (e) {
-      debugPrint("Error getting initial position: $e");
-    }
+      
+      if (permission == LocationPermission.deniedForever) {
+        _showLocationError('Izin lokasi ditolak permanen. Silakan aktifkan di pengaturan.');
+        return;
+      } 
 
-    Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 2,
-      )
-    ).listen((Position position) {
-      if (!mounted) return;
-      
-      final distance = Geolocator.distanceBetween(
-        position.latitude,
-        position.longitude,
-        campusLat,
-        campusLng,
-      );
-      
-      setState(() {
-        _currentPosition = position;
-        _distanceFromCampus = distance;
-        _isLocationValid = distance <= maxRadius;
+      // Fetch initial position immediately with timeout
+      final initialPosition = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5),
+        ),
+      ).timeout(const Duration(seconds: 6), onTimeout: () {
+        // Fallback or error if timeout occurs
+        throw 'Timeout getting location';
       });
+      
+      _updateLocationData(initialPosition);
+
+      // Start stream for continuous updates
+      Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 2,
+        )
+      ).listen((Position position) {
+        _updateLocationData(position);
+      }, onError: (e) {
+        debugPrint("Location stream error: $e");
+      });
+
+    } catch (e) {
+      debugPrint("Error initializing location: $e");
+      
+      // On Web/Emulator, provide a fallback for demo if real GPS fails
+      if (kIsWeb || !kReleaseMode) {
+        debugPrint("Falling back to campus location for testing...");
+        _updateLocationData(Position(
+          latitude: campusLat,
+          longitude: campusLng,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          heading: 0,
+          speed: 0,
+          speedAccuracy: 0,
+          altitudeAccuracy: 0,
+          headingAccuracy: 0,
+        ));
+      } else {
+        _showLocationError('Gagal mendapatkan lokasi. Pastikan GPS aktif.');
+      }
+    }
+  }
+
+  void _showLocationError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _updateLocationData(Position position) {
+    if (!mounted) return;
+    
+    final distance = Geolocator.distanceBetween(
+      position.latitude,
+      position.longitude,
+      campusLat,
+      campusLng,
+    );
+    
+    setState(() {
+      _currentPosition = position;
+      _distanceFromCampus = distance;
+      // Allow any location for demo/web if needed, but here we keep the maxRadius logic
+      _isLocationValid = distance <= maxRadius;
     });
   }
 
   Future<void> _initializeCameraAndMLKit() async {
-    // 1. Setup ML Kit Face Detector
-    final options = FaceDetectorOptions(
-      enableContours: false,
-      enableClassification: false,
-      enableLandmarks: false,
-      performanceMode: FaceDetectorMode.fast,
-    );
-    _faceDetector = FaceDetector(options: options);
+    // 1. Setup ML Kit Face Detector (Mobile Only)
+    if (!kIsWeb) {
+      final options = FaceDetectorOptions(
+        enableContours: false,
+        enableClassification: false,
+        enableLandmarks: false,
+        performanceMode: FaceDetectorMode.fast,
+      );
+      _faceDetector = FaceDetector(options: options);
+    } else {
+      // Mock detection for Web
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _isFaceDetected = true;
+          });
+        }
+      });
+    }
 
     // 2. Setup Camera
     try {
+      if (kIsWeb) {
+        // Simple Web camera init
+        final cameras = await availableCameras();
+        if (cameras.isNotEmpty) {
+          _cameraDescription = cameras.firstWhere(
+            (camera) => camera.lensDirection == CameraLensDirection.front,
+            orElse: () => cameras.first,
+          );
+          _cameraController = CameraController(
+            _cameraDescription!,
+            ResolutionPreset.medium,
+            enableAudio: false,
+          );
+          await _cameraController!.initialize();
+          if (mounted) setState(() => _isCameraInitialized = true);
+        }
+        return;
+      }
+
+      // Mobile camera init
       final cameras = await availableCameras();
-      // Try to find the front camera
       _cameraDescription = cameras.firstWhere(
         (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
@@ -152,9 +233,9 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
         _cameraDescription!,
         ResolutionPreset.medium,
         enableAudio: false,
-        imageFormatGroup: Platform.isIOS 
-            ? ImageFormatGroup.bgra8888 
-            : ImageFormatGroup.nv21,
+        imageFormatGroup: (defaultTargetPlatform == TargetPlatform.iOS
+                ? ImageFormatGroup.bgra8888
+                : ImageFormatGroup.nv21),
       );
 
       await _cameraController!.initialize();
@@ -164,12 +245,14 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
         _isCameraInitialized = true;
       });
 
-      // 3. Start Image Stream for Face Detection
-      _cameraController!.startImageStream((CameraImage image) {
-        if (_isDetecting) return;
-        _isDetecting = true;
-        _processCameraImage(image);
-      });
+      // 3. Start Image Stream (Mobile Only)
+      if (!kIsWeb) {
+        _cameraController!.startImageStream((CameraImage image) {
+          if (_isDetecting) return;
+          _isDetecting = true;
+          _processCameraImage(image);
+        });
+      }
     } catch (e) {
       debugPrint("Error initializing camera: $e");
     }
@@ -217,9 +300,13 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
   @override
   void dispose() {
     _scannerController.dispose();
-    _cameraController?.stopImageStream();
+    if (!kIsWeb) {
+      _cameraController?.stopImageStream();
+    }
     _cameraController?.dispose();
-    _faceDetector.close();
+    if (!kIsWeb) {
+      _faceDetector.close();
+    }
     super.dispose();
   }
 
@@ -231,8 +318,10 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
     });
 
     try {
-      // 1. Stop image stream before taking picture
-      await _cameraController?.stopImageStream();
+      // 1. Stop image stream before taking picture (Mobile Only)
+      if (!kIsWeb) {
+        await _cameraController?.stopImageStream();
+      }
       
       // 2. Take picture for proof
       final XFile? photo = await _cameraController?.takePicture();
@@ -562,6 +651,13 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
                                 color: AppColors.textDark,
                               ),
                             ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.refresh_rounded, color: AppColors.tosca, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: _initializeLocation,
+                            ),
                             const SizedBox(width: 8),
                             if (_currentPosition != null)
                               Container(
@@ -585,7 +681,7 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
                         Text(
                           _currentPosition != null 
                             ? "Lat: ${_currentPosition!.latitude.toStringAsFixed(6)} • Lng: ${_currentPosition!.longitude.toStringAsFixed(6)}"
-                            : "Mencari lokasi GPS...",
+                            : "Mencari koordinat...",
                           style: const TextStyle(
                             fontSize: 12,
                             fontFamily: "monospace",
@@ -595,8 +691,10 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
                         const SizedBox(height: 2),
                         Text(
                           _currentPosition != null
-                            ? "Jarak dari kampus: ${_distanceFromCampus.toStringAsFixed(1)} meter"
-                            : "Menunggu satelit...",
+                            ? (_distanceFromCampus == 0 && _currentPosition!.accuracy == 0 
+                                ? "Mode Demo: Menggunakan lokasi kampus" 
+                                : "Jarak dari kampus: ${_distanceFromCampus.toStringAsFixed(1)} meter")
+                            : "Menjalankan pemindaian satelit...",
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
