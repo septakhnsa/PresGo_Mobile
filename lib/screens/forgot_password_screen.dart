@@ -72,6 +72,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
+  // ✅ FUNGSI VALIDASI EMAIL (BARU!)
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
   // ==========================================
   // BACKEND LOGIC: API REQUESTS
   // ==========================================
@@ -384,19 +389,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 48),
 
-        // Submit Button
+        // Submit Button - ✅ UDAH ADA VALIDASI EMAIL
         ElevatedButton(
           onPressed: _isLoading
               ? null
               : () {
-                  if (_emailController.text.trim().isEmpty) {
+                  final email = _emailController.text.trim();
+
+                  // Validasi 1: Cek kosong
+                  if (email.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text("Email tidak boleh kosong!"),
+                        backgroundColor: Colors.red,
                       ),
                     );
                     return;
                   }
+
+                  // Validasi 2: Cek format email (BARU!)
+                  if (!_isValidEmail(email)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Format email tidak valid!"),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
                   _requestOtp();
                 },
           style: ElevatedButton.styleFrom(
