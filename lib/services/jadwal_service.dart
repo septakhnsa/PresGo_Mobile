@@ -95,8 +95,8 @@ class JadwalService {
     JadwalModel(id: '2', mataKuliah: 'Komputasi Awan', dosen: 'Pak Joko', ruangan: 'K.B. R2.1', hari: 'Senin', jamMulai: '11:00', jamSelesai: '13:00', status: 'Belum Absen'),
     JadwalModel(id: '3', mataKuliah: 'RPL', dosen: 'Bu Rini', ruangan: 'K.S. R1.2', hari: 'Selasa', jamMulai: '08:30', jamSelesai: '10:00', status: 'Belum Absen'),
     JadwalModel(id: '4', mataKuliah: 'Mobile Programming', dosen: 'Pak Aryo', ruangan: 'K.B. R2.3', hari: 'Rabu', jamMulai: '10:00', jamSelesai: '12:00', status: 'Belum Absen'),
-    // Kamis Free
-    JadwalModel(id: '5', mataKuliah: 'WebPro Lanjut', dosen: 'Pak Bayu', ruangan: 'K.B. Lab 2', hari: 'Jumat', jamMulai: '09:30', jamSelesai: '11:30', status: 'Belum Absen'),
+    JadwalModel(id: '5', mataKuliah: 'Kecerdasan Buatan', dosen: 'Bu Siti Delimasari', ruangan: 'Lab Komputer 1', hari: 'Kamis', jamMulai: '14:00', jamSelesai: '15:30', status: 'Belum Absen'),
+    JadwalModel(id: '6', mataKuliah: 'WebPro Lanjut', dosen: 'Pak Bayu', ruangan: 'K.B. Lab 2', hari: 'Jumat', jamMulai: '09:30', jamSelesai: '11:30', status: 'Belum Absen'),
   ];
 
 
@@ -105,8 +105,8 @@ class JadwalService {
     int weekday = DateTime.now().weekday;
     String hariIni = _getHariString(weekday);
     
-    // BYPASS: Jika hari Sabtu/Minggu atau Kamis (Free), default ke Senin agar presentasi tetap ada datanya.
-    if (weekday == 6 || weekday == 7 || weekday == 4) {
+    // BYPASS: Jika hari Sabtu/Minggu, default ke Senin agar presentasi tetap ada datanya.
+    if (weekday == 6 || weekday == 7) {
       hariIni = 'Senin';
     }
 

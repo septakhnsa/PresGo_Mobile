@@ -402,115 +402,79 @@ class _MainNavigationState extends State<MainNavigation> {
           top: 16,
           left: 16,
           right: 16,
-          child: Builder(
-            builder: (context) {
-              final todaysJadwal = JadwalService.instance.getJadwalHariIni();
-              final now = _now;
-              
-              JadwalModel? activeJadwal;
-              bool isNext = false;
-
-              // 1. Find currently active class (not yet attended)
-              try {
-                activeJadwal = todaysJadwal.firstWhere((j) {
-                  final start = DateTime(now.year, now.month, now.day, int.parse(j.jamMulai.split(':')[0]), int.parse(j.jamMulai.split(':')[1]));
-                  final end = DateTime(now.year, now.month, now.day, int.parse(j.jamSelesai.split(':')[0]), int.parse(j.jamSelesai.split(':')[1]));
-                  return now.isAfter(start) && now.isBefore(end) && j.status != 'Sudah Absen';
-                });
-                isNext = false;
-              } catch (_) {
-                // 2. If no active, find next upcoming class (not yet attended)
-                try {
-                  activeJadwal = todaysJadwal.firstWhere((j) {
-                    final start = DateTime(now.year, now.month, now.day, int.parse(j.jamMulai.split(':')[0]), int.parse(j.jamMulai.split(':')[1]));
-                    return now.isBefore(start) && j.status != 'Sudah Absen';
-                  });
-                  isNext = true;
-                } catch (_) {
-                  activeJadwal = null;
-                }
-              }
-
-              if (activeJadwal == null) return const SizedBox.shrink();
-
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                decoration: BoxDecoration(
-                  color: isNext ? const Color(0xFFFEF9C3) : const Color(0xFFDCFCE7), // Yellow if next, Green if current
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isNext ? Colors.red.shade300 : Colors.green.shade300, width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.07),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    )
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            isNext ? "Jadwal Berikutnya" : "Sedang Berlangsung",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                              color: isNext ? Colors.red : Colors.green.shade800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            activeJadwal.mataKuliah,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: AppColors.textDark,
-                            ),
-                          ),
-                          Text(
-                            "${activeJadwal.jamMulai} - ${activeJadwal.jamSelesai} @ ${activeJadwal.ruangan}",
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textMuted,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const DashboardPresensiScreen()),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isNext ? const Color(0xFFFEF08A) : Colors.green.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: isNext ? Colors.red : Colors.green, width: 1),
-                        ),
-                        child: Text(
-                          "Detail",
-                          style: TextStyle(
-                            color: isNext ? Colors.red : Colors.green.shade900,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DashboardPresensiScreen()),
               );
-            }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFD54F),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0xFF092A13), // 3D Solid blackish shadow
+                    blurRadius: 0,
+                    spreadRadius: 0,
+                    offset: Offset(-6, 6),
+                  )
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatDateId(_now),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        "STMIK Widya Utama",
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        "Sudah cek absensi hari ini?",
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        "Lihat Absensi",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
 
