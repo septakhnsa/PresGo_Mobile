@@ -21,7 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   void _handleLogin() {
-    if (_nimController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+    if (_nimController.text.trim().isEmpty ||
+        _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -33,7 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           backgroundColor: AppColors.redAlpa,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -102,12 +105,15 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 20.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 28.0,
+              vertical: 20.0,
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 10),
-                
+
                 // 1. Logo Card
                 const LogoCard(size: 85),
                 const SizedBox(height: 16),
@@ -156,11 +162,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: TextFormField(
                     controller: _nimController,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.w600,
+                    ),
                     decoration: const InputDecoration(
                       hintText: "ketik disini..",
                       hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       border: InputBorder.none,
                     ),
                   ),
@@ -188,15 +200,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
-                    style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.w600,
+                    ),
                     decoration: InputDecoration(
                       hintText: "ketik disini..",
-                      hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      hintStyle: const TextStyle(
+                        color: Colors.black38,
+                        fontSize: 14,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       border: InputBorder.none,
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           color: Colors.black38,
                           size: 20,
                         ),
@@ -236,7 +259,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               },
                               activeColor: AppColors.goldAccent,
                               checkColor: AppColors.tosca,
-                              side: const BorderSide(color: Colors.white70, width: 1.5),
+                              side: const BorderSide(
+                                color: Colors.white70,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -251,13 +277,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
-                    
+
                     // Forgot password link
                     GestureDetector(
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => const ForgotPasswordScreen(),
+                          ),
                         );
                       },
                       child: const Text(
@@ -296,7 +324,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.tosca),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.tosca,
+                                  ),
                                   strokeWidth: 2.5,
                                 ),
                               )
@@ -355,7 +385,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterScreen(),
+                          ),
                         );
                       },
                       child: const Text(
