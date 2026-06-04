@@ -402,6 +402,7 @@ class _MainNavigationState extends State<MainNavigation> {
           top: 16,
           left: 16,
           right: 16,
+<<<<<<< HEAD
           child: Builder(
             builder: (context) {
               final todaysJadwal = JadwalService.instance.getJadwalHariIni();
@@ -511,6 +512,81 @@ class _MainNavigationState extends State<MainNavigation> {
                 ),
               );
             }
+=======
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DashboardPresensiScreen()),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFD54F),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0xFF092A13), // 3D Solid blackish shadow
+                    blurRadius: 0,
+                    spreadRadius: 0,
+                    offset: Offset(-6, 6),
+                  )
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatDateId(_now),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        "STMIK Widya Utama",
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        "Sudah cek absensi hari ini?",
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        "Lihat Absensi",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+>>>>>>> 258ae7f4e869e196c36fc94781e4af73ebc3ac9b
           ),
         ),
 

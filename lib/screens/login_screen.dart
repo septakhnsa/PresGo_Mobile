@@ -5,6 +5,8 @@ import '../widgets/fingerprint_dialog.dart';
 import 'main_navigation.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import '../services/auth_service.dart';
+import 'admin_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,8 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   void _handleLogin() {
-    if (_nimController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty) {
+    if (_nimController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -34,62 +35,80 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           backgroundColor: AppColors.redAlpa,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+  setState(() => _isLoading = true);
 
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        _navigateToDashboard();
-      }
-    });
-  }
+  final result = await AuthService.login(
+    _nimController.text.trim(),
+    _passwordController.text.trim(),
+  );
 
-  void _navigateToDashboard() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const MainNavigation()),
-    );
+  setState(() => _isLoading = false);
+
+  if (result['success'] == true) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: const [
             Icon(Icons.check_circle_outline, color: Colors.white),
             SizedBox(width: 8),
-            Expanded(child: Text("Login Berhasil! Selamat datang, Septa.")),
+            Expanded(child: Text("Login Berhasil!")),
           ],
         ),
         backgroundColor: AppColors.greenHadir,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
+
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (result['user']['role'] == 'admin') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const AdminScreen()),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const MainNavigation()),
+      );
+    }
+
+    return;
   }
 
-  void _showBiometricDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => FingerprintDialog(
-        onSuccess: () {
-          // Pre-fill simulated credential
-          _nimController.text = "2209106041";
-          _passwordController.text = "password123";
-          _navigateToDashboard();
-        },
-      ),
-    );
-  }
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(result['message'] ?? 'Login gagal'),
+      backgroundColor: Colors.red,
+    ),
+  );
+}
+  void _navigateToDashboard() {
+   Navigator.of(context).pushReplacement(
+    MaterialPageRoute(
+      builder: (context) => const MainNavigation(),
+    ),
+  );
+}
+  void _showBiometricDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => FingerprintDialog(
+      onSuccess: () {
+        // Pre-fill simulated credential
+        Navigator.of(dialogContext).pushReplacement(
+          MaterialPageRoute(
+            builder: (routeContext) => MainNavigation(),
+          ),
+        );
+      },
+    ),
+  );
+}
 
   @override
   void dispose() {
