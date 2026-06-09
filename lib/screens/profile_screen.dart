@@ -3,10 +3,16 @@ import '../theme/app_theme.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  final Map<String, dynamic> user;
 
-  final String _profileAvatarUrl = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop";
+  const ProfileScreen({
+    super.key,
+    required this.user,
+  });
 
+  final String _profileAvatarUrl =
+      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop";
+  
   void _handleLogout(BuildContext context) {
     showDialog(
       context: context,
@@ -52,6 +58,8 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print("PROFILE USER = $user");
+    
     return Scaffold(
       backgroundColor: Colors.white, // Standard white background
       body: Stack(
@@ -85,8 +93,8 @@ class ProfileScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         
                         // Name
-                        const Text(
-                          "Septa Khoerun Nisa",
+                        Text(
+                          user['name'] ?? '-',
                           style: TextStyle(
                             color: AppColors.toscaDark,
                             fontSize: 22,
@@ -97,7 +105,7 @@ class ProfileScreen extends StatelessWidget {
                         
                         // NIM
                         Text(
-                          "STI202303888",
+                          user['nim'] ?? '-',
                           style: TextStyle(
                             color: AppColors.toscaDark.withOpacity(0.7),
                             fontSize: 12,
@@ -145,7 +153,7 @@ class ProfileScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       _buildInfoRow("Instansi", "STMIK Widya Utama Purwokerto"),
                       _buildInfoRow("Prodi", "S1 Teknik Informatika"),
-                      _buildInfoRow("NIM/Angkatan", "STI202303888 / 2023"),
+                      _buildInfoRow("Angkatan", "2023"),
                       _buildInfoRow("Kelas", "Reguler Pagi A 6.1"),
                       const SizedBox(height: 8),
                       const Divider(color: Color(0xFFF1F5F9), thickness: 2),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -27,9 +28,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill "5" and "9" in the first two OTP boxes exactly like Figma
-    _otpControllers[0].text = "5";
-    _otpControllers[1].text = "9";
   }
 
   @override
@@ -199,15 +197,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         // Submit Button
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             if (_emailController.text.trim().isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Email tidak boleh kosong!")),
               );
               return;
-            }
-            _nextStep();
-          },
+        }
+
+            final result = await AuthService.forgotPassword(
+              _emailController.text.trim(),
+        );
+
+            if (result['success'] == true) {
+              _nextStep();
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    result['message'] ?? 'Gagal mengirim OTP',
+                  ),
+                ),
+              );
+        }
+  },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.tosca, // Green button
             foregroundColor: Colors.white,
@@ -319,7 +332,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         // Action Button: Kirim Kode OTP
         ElevatedButton(
-          onPressed: _nextStep,
+          onPressed: () async {
+            String otpCode = _otpControllers
+                .map((controller) => controller.text)
+                .join();
+
+            final result = await AuthService.verifyOtp(
+              _emailController.text.trim(),
+              otpCode,
+            );
+
+            if (result['success'] == true) {
+              _nextStep();
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    result['message'] ?? 'OTP tidak valid',
+                  ),
+              ),
+          );
+        }
+      },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.tosca, // Green button
             foregroundColor: Colors.white,
@@ -547,21 +581,48 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         // Action Button: Simpan Password Baru
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             if (_passwordController.text.length < 8) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Password minimal harus 8 karakter!")),
-              );
-              return;
-            }
-            if (_passwordController.text != _confirmPasswordController.text) {
+                const SnackBar(
+                  content: Text("Password minimal harus 8 karakter!"),
+              ),
+            );
+            return;
+          }
+
+            if (_passwordController.text !=
+              _confirmPasswordController.text) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Konfirmasi password tidak cocok!"),
+              ),
+          );
+          return;
+        }
+
+            String otpCode = _otpControllers
+                .map((controller) => controller.text)
+                .join();
+
+            final result = await AuthService.resetPassword(
+              _emailController.text.trim(),
+              otpCode,
+              _passwordController.text,
+            );
+
+            if (result['success'] == true) {
+              _nextStep();
+            } else {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Konfirmasi password tidak cocok!")),
-              );
-              return;
-            }
-            _nextStep();
-          },
+                SnackBar(
+                  content: Text(
+                    result['message'] ?? 'Gagal mengubah password',
+                  ),
+                ),
+            );
+          }
+        },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.tosca, // Green button
             foregroundColor: Colors.white,

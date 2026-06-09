@@ -47,9 +47,13 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.text.trim(),
   );
 
+  print("LOGIN RESULT:");
+  print(result);
+
   setState(() => _isLoading = false);
 
   if (result['success'] == true) {
+    print(result['user']);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -67,11 +71,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (result['user']['role'] == 'admin') {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const AdminScreen()),
+        MaterialPageRoute(
+          builder: (context) => AdminScreen(user: result['user']),
+        ),
       );
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainNavigation()),
+        MaterialPageRoute(
+          builder: (context) => MainNavigation(
+            user: result['user']
+          ),
+        ),
       );
     }
 
@@ -88,11 +98,16 @@ class _LoginScreenState extends State<LoginScreen> {
   void _navigateToDashboard() {
    Navigator.of(context).pushReplacement(
     MaterialPageRoute(
-      builder: (context) => const MainNavigation(),
+      builder: (context) =>  MainNavigation(
+        user: {
+          'nama': 'Aina',
+          'nim': 'STI202303520',
+      }
+      ),
     ),
   );
 }
-  void _showBiometricDialog(BuildContext context) {
+  void _showBiometricDialog() {
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -101,7 +116,12 @@ class _LoginScreenState extends State<LoginScreen> {
         // Pre-fill simulated credential
         Navigator.of(dialogContext).pushReplacement(
           MaterialPageRoute(
-            builder: (routeContext) => MainNavigation(),
+            builder: (routeContext) => MainNavigation(
+              user: {
+                'nama': 'Aina',
+                'nim': 'STI202303520',
+              }
+            ),
           ),
         );
       },
@@ -160,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    "NIM",
+                    "NIM / Email",
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 14,
@@ -176,10 +196,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: TextFormField(
                     controller: _nimController,
-                    keyboardType: TextInputType.number,
+                    keyboardType: TextInputType.text,
                     style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
                     decoration: const InputDecoration(
-                      hintText: "ketik disini..",
+                      hintText: "Masukan NIM atau Email",
                       hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
                       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: InputBorder.none,
@@ -287,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: Colors.white,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          decoration: TextDecoration.underline,
+                          decoration: TextDecoration.none,
                         ),
                       ),
                     ),
@@ -335,7 +355,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Fingerprint biometric button
                     GestureDetector(
-                      onTap: _showBiometricDialog,
+                      onTap: () => _showBiometricDialog(),
                       child: Container(
                         width: 50,
                         height: 50,

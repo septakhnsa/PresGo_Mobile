@@ -24,10 +24,16 @@ String _formatDateId(DateTime d) {
 }
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
+  final Map<String, dynamic> user;
+
+  const MainNavigation({
+    super.key,
+    required this.user,
+  });
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  State<MainNavigation> createState() => 
+_MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
@@ -190,8 +196,8 @@ class _MainNavigationState extends State<MainNavigation> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Septa Khoerun Nisa",
+                  Text(
+                    widget.user['name'] ?? '-',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -201,7 +207,7 @@ class _MainNavigationState extends State<MainNavigation> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "STI202303888",
+                    widget.user['nim'] ?? '-',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.7),
                       fontSize: 12,
@@ -271,20 +277,22 @@ class _MainNavigationState extends State<MainNavigation> {
 
   // SCREEN SELECTOR
   Widget _buildActiveScreen() {
-    if (_showNotificationPage) {
-      return _buildNotificationPage();
-    }
-
-    switch (_activeTab) {
-      case "Profile":
-        return const ProfileScreen();
-      case "History":
-        return const HistoryScreen();
-      case "Home":
-      default:
-        return _buildMapHomeScreen();
-    }
+  if (_showNotificationPage) {
+    return _buildNotificationPage();
   }
+
+  switch (_activeTab) {
+    case "Profile":
+      return ProfileScreen(
+        user: widget.user,
+      );
+    case "History":
+      return const HistoryScreen();
+    case "Home":
+    default:
+      return _buildMapHomeScreen();
+  }
+}
 
   // HOME SCREEN: Live Interactive Map View dengan Flutter Map (OpenStreetMap tile nyata)
   Widget _buildMapHomeScreen() {
@@ -402,7 +410,6 @@ class _MainNavigationState extends State<MainNavigation> {
           top: 16,
           left: 16,
           right: 16,
-<<<<<<< HEAD
           child: Builder(
             builder: (context) {
               final todaysJadwal = JadwalService.instance.getJadwalHariIni();
@@ -432,7 +439,86 @@ class _MainNavigationState extends State<MainNavigation> {
                 }
               }
 
-              if (activeJadwal == null) return const SizedBox.shrink();
+              if (activeJadwal == null) {
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DashboardPresensiScreen(
+                          user: widget.user,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD54F),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0xFF092A13), // 3D Solid blackish shadow
+                          blurRadius: 0,
+                          spreadRadius: 0,
+                          offset: Offset(-6, 6),
+                        )
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _formatDateId(_now),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              "STMIK Widya Utama",
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: Colors.black54,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Text(
+                              "Sudah cek absensi hari ini?",
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.black54,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              "Lihat Absensi",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
 
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
@@ -488,7 +574,11 @@ class _MainNavigationState extends State<MainNavigation> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const DashboardPresensiScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => DashboardPresensiScreen(
+                              user: widget.user,
+                            ),
+                          ),
                         );
                       },
                       child: Container(
@@ -511,82 +601,7 @@ class _MainNavigationState extends State<MainNavigation> {
                   ],
                 ),
               );
-            }
-=======
-          child: GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const DashboardPresensiScreen()),
-              );
             },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFD54F),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0xFF092A13), // 3D Solid blackish shadow
-                    blurRadius: 0,
-                    spreadRadius: 0,
-                    offset: Offset(-6, 6),
-                  )
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatDateId(_now),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        "STMIK Widya Utama",
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: Colors.black54,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Text(
-                        "Sudah cek absensi hari ini?",
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.black54,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        "Lihat Absensi",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
->>>>>>> 258ae7f4e869e196c36fc94781e4af73ebc3ac9b
           ),
         ),
 
@@ -778,8 +793,8 @@ class _MainNavigationState extends State<MainNavigation> {
                 const SizedBox(height: 12),
 
                 // ── NIM + Name ──
-                const Text(
-                  "STI202303888",
+                Text(
+                  widget.user['nim'] ?? '-',
                   style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 12.5,
@@ -787,8 +802,8 @@ class _MainNavigationState extends State<MainNavigation> {
                   ),
                 ),
                 const SizedBox(height: 3),
-                const Text(
-                  "Septa Khoerun Nisa",
+                Text(
+                  widget.user['name'] ?? '-',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
