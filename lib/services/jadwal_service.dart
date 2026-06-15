@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../models/jadwal_model.dart';
 import '../models/presensi_model.dart';
+import 'auth_service.dart';
 
 class JadwalService {
   // Singleton instance
@@ -11,12 +14,73 @@ class JadwalService {
   // List notifikasi dinamis
   final List<Map<String, dynamic>> notifications = [];
 
+  // Apakah jadwal sudah berhasil diambil dari API
+  bool isLoadedFromApi = false;
+
   JadwalService._internal() {
     updateNotifications(DateTime.now());
   }
 
+  // ── DATA JADWAL ──────────────────────────────────────────────────────────
+  // Data statis sebagai fallback jika API tidak tersedia
+  final List<JadwalModel> _staticJadwal = [
+    JadwalModel(id: '1', kode: '#2', mataKuliah: 'Metodologi Penelitian',  dosen: 'Lutvi Riyandari, S.Pd, M.Si',       ruangan: 'K.B. R2.1',  hari: 'Senin',  jamMulai: '08:30', jamSelesai: '09:30', status: 'Belum Absen'),
+    JadwalModel(id: '2', kode: '#5', mataKuliah: 'Komputasi Awan',         dosen: 'Joko Purnomo, M.Kom',               ruangan: 'K.B. R2.1',  hari: 'Senin',  jamMulai: '11:00', jamSelesai: '13:00', status: 'Belum Absen'),
+    JadwalModel(id: '3', kode: '#67', mataKuliah: 'Rekayasa Perangkat Lunak', dosen: 'Eldas Puspita Rini, M.Kom',      ruangan: 'K.S. R1.2',  hari: 'Selasa', jamMulai: '08:30', jamSelesai: '10:00', status: 'Belum Absen'),
+    JadwalModel(id: '4', kode: '#29', mataKuliah: 'Mobile Programming Lanjut', dosen: 'Sunaryono, M.Kom',              ruangan: 'K.B. R2.3',  hari: 'Rabu',   jamMulai: '10:00', jamSelesai: '12:00', status: 'Belum Absen'),
+    JadwalModel(id: '6', kode: '#51', mataKuliah: 'Web Programming Lanjut', dosen: 'Bayu Rizkya Pratama, S.Kom., M.Pd', ruangan: 'K.B. Lab 2', hari: 'Jumat',  jamMulai: '09:30', jamSelesai: '11:30', status: 'Belum Absen'),
+  ];
+
+  // Jadwal aktif — diisi dari API atau fallback ke statis
+  List<JadwalModel> allJadwal = [];
+
+  // ── FETCH DARI API ────────────────────────────────────────────────────────
+  Future<void> fetchJadwalFromApi() async {
+    final token = AuthService.authToken;
+    if (token == null) {
+      // Belum login, pakai data statis
+      _loadStaticJadwal();
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('${AuthService.baseUrl}/jadwal'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> jadwalList = data['data'];
+        
+        allJadwal = jadwalList
+            .map((j) => JadwalModel.fromJson(j))
+            .toList();
+        
+        isLoadedFromApi = true;
+        print('✅ Jadwal berhasil diambil dari API: ${allJadwal.length} jadwal');
+      } else {
+        print('⚠️ API jadwal gagal (${response.statusCode}), pakai data statis');
+        _loadStaticJadwal();
+      }
+    } catch (e) {
+      print('⚠️ Error fetch jadwal: $e, pakai data statis');
+      _loadStaticJadwal();
+    }
+  }
+
+  void _loadStaticJadwal() {
+    allJadwal = List.from(_staticJadwal);
+    isLoadedFromApi = false;
+  }
+
+  // ── NOTIFIKASI ─────────────────────────────────────────────────────────────
   void updateNotifications(DateTime now) {
-    // 1. Ambil jadwal hari ini (termasuk bypass)
+    if (allJadwal.isEmpty) return;
+
     String hariIni = _getHariString(now.weekday);
     if (now.weekday == 6 || now.weekday == 7 || now.weekday == 4) {
       hariIni = 'Senin';
@@ -24,17 +88,13 @@ class JadwalService {
     
     final todaysJadwal = allJadwal.where((j) => j.hari == hariIni).toList();
 
-    // 2. Filter notifikasi: Simpan hanya notifikasi "Berhasil" (yang permanen)
-    // dan hapus pengingat otomatis agar bisa diupdate
     final successNotifs = notifications.where((n) => n['headerText'] == 'Presensi Berhasil').toList();
     notifications.clear();
     notifications.addAll(successNotifs);
 
-    // 3. Cek setiap jadwal untuk hari ini
     for (var jadwal in todaysJadwal) {
       if (jadwal.status == 'Sudah Absen') continue;
 
-      // Parse jam mulai dan selesai
       final partsMulai = jadwal.jamMulai.split(':');
       final partsSelesai = jadwal.jamSelesai.split(':');
       if (partsMulai.length != 2 || partsSelesai.length != 2) continue;
@@ -44,18 +104,14 @@ class JadwalService {
       final hourSelesai = int.parse(partsSelesai[0]);
       final minuteSelesai = int.parse(partsSelesai[1]);
       
-      // Buat DateTime untuk jadwal hari ini
       final startTime = DateTime(now.year, now.month, now.day, hourMulai, minuteMulai);
       final endTime = DateTime(now.year, now.month, now.day, hourSelesai, minuteSelesai);
       final notificationTime = startTime.subtract(const Duration(minutes: 15));
 
-      // Jika waktu sekarang sudah masuk jendela 15 menit sebelum DAN belum lewat jam selesai
       if (now.isAfter(notificationTime) && now.isBefore(endTime)) {
-        // Cek apakah sudah ada pengingat untuk matkul ini
         bool alreadyExists = notifications.any((n) => n['subjectName'] == jadwal.mataKuliah && n['isActionable'] == true);
         
         if (!alreadyExists) {
-          // Tentukan teks waktu dan body yang lebih akurat
           String timeDisplay = 'Baru saja';
           String bodyDisplay = 'Kelas ${jadwal.mataKuliah} dimulai 15 Menit lagi.';
           
@@ -89,19 +145,10 @@ class JadwalService {
     }
   }
 
-  // Data Jadwal Statis sesuai gambar (A6.1 - Smt 6)
-  final List<JadwalModel> allJadwal = [
-    JadwalModel(id: '1', mataKuliah: 'Metopen', dosen: 'Bu Lutvi', ruangan: 'K.B. R2.1', hari: 'Senin', jamMulai: '08:30', jamSelesai: '09:30', status: 'Belum Absen'),
-    JadwalModel(id: '2', mataKuliah: 'Komputasi Awan', dosen: 'Pak Joko', ruangan: 'K.B. R2.1', hari: 'Senin', jamMulai: '11:00', jamSelesai: '13:00', status: 'Belum Absen'),
-    JadwalModel(id: '3', mataKuliah: 'RPL', dosen: 'Bu Rini', ruangan: 'K.S. R1.2', hari: 'Selasa', jamMulai: '08:30', jamSelesai: '10:00', status: 'Belum Absen'),
-    JadwalModel(id: '4', mataKuliah: 'Mobile Programming', dosen: 'Pak Aryo', ruangan: 'K.B. R2.3', hari: 'Rabu', jamMulai: '10:00', jamSelesai: '12:00', status: 'Belum Absen'),
-    // Kamis Free
-    JadwalModel(id: '5', mataKuliah: 'WebPro Lanjut', dosen: 'Pak Bayu', ruangan: 'K.B. Lab 2', hari: 'Jumat', jamMulai: '09:30', jamSelesai: '11:30', status: 'Belum Absen'),
-  ];
-
-
-  // Ambil jadwal hari ini berdasarkan dayOfWeek (1=Senin, ..., 7=Minggu)
+  // ── JADWAL HARI INI ────────────────────────────────────────────────────────
   List<JadwalModel> getJadwalHariIni() {
+    if (allJadwal.isEmpty) _loadStaticJadwal();
+    
     int weekday = DateTime.now().weekday;
     String hariIni = _getHariString(weekday);
     
@@ -113,24 +160,13 @@ class JadwalService {
     return allJadwal.where((j) => j.hari == hariIni).toList();
   }
 
-  // Fungsi menandai hadir
+  // ── MARK HADIR ─────────────────────────────────────────────────────────────
   void markHadir(String jadwalId, String fotoPath) {
-    // 1. Update status jadwal
     int index = allJadwal.indexWhere((j) => j.id == jadwalId);
     if (index != -1) {
       final old = allJadwal[index];
-      allJadwal[index] = JadwalModel(
-        id: old.id,
-        mataKuliah: old.mataKuliah,
-        dosen: old.dosen,
-        ruangan: old.ruangan,
-        hari: old.hari,
-        jamMulai: old.jamMulai,
-        jamSelesai: old.jamSelesai,
-        status: 'Sudah Absen',
-      );
+      allJadwal[index] = old.copyWith(status: 'Sudah Absen');
 
-      // 2. Tambah ke history
       final now = DateTime.now();
       final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
       final dateStr = "${_getHariString(now.weekday)}, ${now.day} ${_getBulanString(now.month)} ${now.year}";
@@ -138,7 +174,12 @@ class JadwalService {
       presensiHistory.insert(0, PresensiModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         jadwalId: old.id,
+        kode: old.kode,
         mataKuliah: old.mataKuliah,
+        dosen: old.dosen,
+        ruangan: old.ruangan,
+        jamMulai: old.jamMulai,
+        jamSelesai: old.jamSelesai,
         tanggal: dateStr,
         jamAbsen: timeStr,
         status: 'Hadir',
@@ -146,11 +187,8 @@ class JadwalService {
         foto: fotoPath,
       ));
 
-      // 3. Update notifikasi
-      // Hapus pengingat untuk matkul ini jika ada
       notifications.removeWhere((n) => n['subjectName'] == old.mataKuliah && n['isActionable'] == true);
       
-      // Tambah notifikasi berhasil
       notifications.insert(0, {
         'id': 'notif_success_${DateTime.now().millisecondsSinceEpoch}',
         'isActionable': false,
@@ -163,6 +201,15 @@ class JadwalService {
     }
   }
 
+  // ── CLEAR DATA (logout) ───────────────────────────────────────────────────
+  void clearData() {
+    presensiHistory.clear();
+    notifications.clear();
+    isLoadedFromApi = false;
+    _loadStaticJadwal(); // Reset ke jadwal statis
+  }
+
+  // ── HELPERS ────────────────────────────────────────────────────────────────
   String _getHariString(int weekday) {
     switch (weekday) {
       case 1: return 'Senin';
@@ -181,3 +228,5 @@ class JadwalService {
     return bulan[month];
   }
 }
+
+

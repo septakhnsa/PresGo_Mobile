@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  // 
-  static const String baseUrl = "http://192.168.1.11:8000/api";
+  static const String baseUrl = "http://192.168.18.66:8000/api";
+
+  // Token disimpan di sini setelah login berhasil
+  static String? authToken;
 
   static Future<Map<String, dynamic>> login(
       String login, String password) async {
@@ -25,6 +27,8 @@ class AuthService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        // Simpan token Sanctum agar bisa dipakai oleh request berikutnya
+        authToken = data['token'];
         return {
           'success': true,
           'user': data['user'],

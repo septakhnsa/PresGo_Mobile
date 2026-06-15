@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
+import '../services/jadwal_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   final Map<String, dynamic> user;
@@ -41,6 +42,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             onPressed: () {
               Navigator.pop(context); // Close dialog
+              JadwalService.instance.clearData();
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
                 (route) => false, // Clear entire screen stack

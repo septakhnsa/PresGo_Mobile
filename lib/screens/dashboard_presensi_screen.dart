@@ -20,14 +20,15 @@ class DashboardPresensiScreen extends StatefulWidget {
 }
 
 class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
-  final String _profileAvatarUrl = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop";
+  final String _profileAvatarUrl =
+      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop";
 
   @override
   Widget build(BuildContext context) {
     final jadwalList = JadwalService.instance.getJadwalHariIni();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF14532D), // Base background is Dark Green
+      backgroundColor: const Color(0xFF14532D),
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
@@ -35,7 +36,8 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
             children: [
               // 1. App Bar and Profile Header (Dark Green Area)
               Padding(
-                padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 8.0, bottom: 40.0),
+                padding: const EdgeInsets.only(
+                    left: 24.0, right: 24.0, top: 8.0, bottom: 40.0),
                 child: Column(
                   children: [
                     // App Bar
@@ -43,17 +45,20 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white, size: 20),
                           padding: EdgeInsets.zero,
                           alignment: Alignment.centerLeft,
                           onPressed: () => Navigator.pop(context),
                         ),
                         const Text(
                           "Dashboard Presensi",
-                          style: TextStyle(color: Colors.transparent, fontSize: 16),
+                          style:
+                              TextStyle(color: Colors.transparent, fontSize: 16),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.more_horiz, color: Colors.white),
+                          icon: const Icon(Icons.more_horiz,
+                              color: Colors.white),
                           padding: EdgeInsets.zero,
                           alignment: Alignment.centerRight,
                           onPressed: () {},
@@ -66,29 +71,32 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.user['name'] ?? '-',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w500,
-                                height: 1.2,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.user['name'] ?? '-',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.2,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              widget.user['nim'] ?? '-',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                              const SizedBox(height: 8),
+                              Text(
+                                widget.user['nim'] ?? '-',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 16),
                         Container(
                           width: 75,
                           height: 75,
@@ -106,201 +114,231 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
                 ),
               ),
 
-              // 2. Sage Green Card Body (Overlapping bottom part)
+              // 2. Sage Green Card Body
               Container(
                 width: double.infinity,
                 constraints: BoxConstraints(
                   minHeight: MediaQuery.of(context).size.height - 200,
                 ),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF7E9D68), // Sage green
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7E9D68),
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(40),
                     topRight: Radius.circular(40),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 10,
-                      offset: Offset(0, -4),
-                    ),
-                    BoxShadow(
-                      color: Color(0xFF092A13), // "Garis lengkung hitam" brutalist shadow
-                      blurRadius: 0,
-                      spreadRadius: 0,
-                      offset: Offset(0, -6), // Balanced X-offset so left and right are perfectly even
+                      color: Colors.black.withOpacity(0.20),
+                      blurRadius: 12,
+                      offset: const Offset(0, -3),
                     ),
                   ],
                 ),
-                child: Transform.translate(
-                  offset: const Offset(0, -35), // Overlap the notification card
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Notification Card
-                        if (JadwalService.instance.notifications.any((n) => n['isActionable'] == true)) ...[
-                          Builder(
-                            builder: (context) {
-                              final activeNotif = JadwalService.instance.notifications.firstWhere((n) => n['isActionable'] == true);
-                              return GestureDetector(
-                                onTap: () => _navigateToCamera(JadwalService.instance.allJadwal.firstWhere((j) => j.mataKuliah == activeNotif['subjectName'])),
-                                child: Container(
-                                  margin: const EdgeInsets.only(left: 6, right: 6, bottom: 8),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(40), // Pill shape
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Color(0xFF14532D), // Solid dark green shadow offset
-                                        blurRadius: 0,
-                                        spreadRadius: 0,
-                                        offset: Offset(-6, 6),
-                                      )
-                                    ],
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24.0, 32.0, 24.0, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Notification Card (hanya tampil jika ada notifikasi actionable)
+                      if (JadwalService.instance.notifications
+                          .any((n) => n['isActionable'] == true))
+                        Builder(
+                          builder: (context) {
+                            final activeNotif = JadwalService
+                                .instance.notifications
+                                .firstWhere((n) => n['isActionable'] == true);
+                            return Column(
+                              children: [
+                                GestureDetector(
+                                  onTap: () => _navigateToCamera(
+                                    JadwalService.instance.allJadwal.firstWhere(
+                                        (j) =>
+                                            j.mataKuliah ==
+                                            activeNotif['subjectName']),
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          const Text(
-                                            "PresGo",
-                                            style: TextStyle(
-                                              color: Color(0xFF14532D),
-                                              fontWeight: FontWeight.w900,
-                                              fontSize: 13,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(
+                                        left: 6, right: 6, bottom: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(40),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0xFF14532D),
+                                          blurRadius: 0,
+                                          spreadRadius: 0,
+                                          offset: Offset(-6, 6),
+                                        )
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Text(
+                                              "PresGo",
+                                              style: TextStyle(
+                                                color: Color(0xFF14532D),
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 13,
+                                              ),
                                             ),
-                                          ),
-                                          const Text(
-                                            " • Baru saja ",
-                                            style: TextStyle(color: Colors.black45, fontSize: 12),
-                                          ),
-                                          Flexible(
-                                            child: Text(
-                                              activeNotif['headerText'],
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 13),
+                                            const Text(
+                                              " • Baru saja ",
+                                              style: TextStyle(
+                                                  color: Colors.black45,
+                                                  fontSize: 12),
                                             ),
+                                            Flexible(
+                                              child: Text(
+                                                activeNotif['headerText'],
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  color: Colors.black87,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Icon(
+                                                Icons.cancel_outlined,
+                                                color: Colors.red,
+                                                size: 16),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          "${activeNotif['bodyText']} >",
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
                                           ),
-                                          const SizedBox(width: 4),
-                                          const Icon(Icons.cancel_outlined, color: Colors.red, size: 16),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        "${activeNotif['bodyText']} >",
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w500),
-                                      ),
-                                    ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              );
-                            }
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-
-                        // Rekap Kehadiran Bulan Ini Card
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(left: 6, right: 6), // Margin for shadow
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFD54F), // Exactly the same yellow as Home banner
-                            borderRadius: BorderRadius.circular(30), // More rounded corners
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0xFF14532D), // Solid dark green shadow
-                                blurRadius: 0,
-                                spreadRadius: 0,
-                                offset: Offset(-6, 6),
-                              )
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              const Text(
-                                "Rekap Kehadiran Bulan ini",
-                                style: TextStyle(
-                                  color: Color(0xFF14532D), // High contrast dark green
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900, // Extra bold
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _buildRekapCard("84%", "Kehadiran", Colors.white, const Color(0xFF14532D)),
-                                  _buildRekapCard("17", "Hadir", Colors.white, Colors.blue.shade800),
-                                  _buildRekapCard("2", "Absen", Colors.white, Colors.red.shade800),
-                                ],
-                              ),
-                            ],
-                          ),
+                                const SizedBox(height: 24),
+                              ],
+                            );
+                          },
                         ),
-                        const SizedBox(height: 28),
 
-                        // Jadwal Hari Ini Title
-                        const Text(
-                          "Jadwal Hari Ini",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      // Rekap Kehadiran Bulan Ini Card
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(left: 6, right: 6),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFD54F),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0xFF14532D),
+                              blurRadius: 0,
+                              spreadRadius: 0,
+                              offset: Offset(-6, 6),
+                            )
+                          ],
                         ),
-                        const SizedBox(height: 16),
+                        child: Column(
+                          children: [
+                            const Text(
+                              "Rekap Kehadiran Bulan ini",
+                              style: TextStyle(
+                                color: Color(0xFF14532D),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _buildRekapCard("84%", "Kehadiran",
+                                    Colors.white, const Color(0xFF14532D)),
+                                _buildRekapCard("17", "Hadir", Colors.white,
+                                    Colors.blue.shade800),
+                                _buildRekapCard("2", "Absen", Colors.white,
+                                    Colors.red.shade800),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 28),
 
-                        // Class Schedule Cards
-                        ...jadwalList.map((jadwal) {
-                          final isHadir = jadwal.status == 'Sudah Absen';
-                          
-                          // Cari foto jika sudah absen
-                          String? photoPath;
-                          if (isHadir) {
-                            try {
-                              final hist = JadwalService.instance.presensiHistory.firstWhere((h) => h.jadwalId == jadwal.id);
-                              photoPath = hist.foto;
-                            } catch (e) {
-                              photoPath = null;
-                            }
+                      // Jadwal Hari Ini Title
+                      const Text(
+                        "Jadwal Hari Ini",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Class Schedule Cards
+                      ...jadwalList.map((jadwal) {
+                        final isHadir = jadwal.status == 'Sudah Absen';
+
+                        String? photoPath;
+                        if (isHadir) {
+                          try {
+                            final hist = JadwalService.instance.presensiHistory
+                                .firstWhere((h) => h.jadwalId == jadwal.id);
+                            photoPath = hist.foto;
+                          } catch (e) {
+                            photoPath = null;
                           }
+                        }
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 24),
-                            child: _buildScheduleCard(
-                              title: jadwal.mataKuliah,
-                              time: "${jadwal.jamMulai} - ${jadwal.jamSelesai}",
-                              room: jadwal.ruangan,
-                              statusText: isHadir ? "Hadir" : "Belum",
-                              statusBgColor: isHadir ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
-                              statusTextColor: isHadir ? const Color(0xFF14532D) : Colors.orange.shade800,
-                              onTap: isHadir ? () => _showPhotoDialog(photoPath) : () => _navigateToCamera(jadwal),
-                              showPhotoIcon: isHadir,
-                            ),
-                          );
-                        }),
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: _buildScheduleCard(
+                            kode: jadwal.kode,
+                            title: jadwal.mataKuliah,
+                            dosen: jadwal.dosen,
+                            time: "${jadwal.jamMulai} - ${jadwal.jamSelesai}",
+                            room: jadwal.ruangan,
+                            statusText: isHadir ? "Hadir" : "Belum",
+                            statusBgColor: isHadir
+                                ? const Color(0xFFDCFCE7)
+                                : const Color(0xFFFEF3C7),
+                            statusTextColor: isHadir
+                                ? const Color(0xFF14532D)
+                                : Colors.orange.shade800,
+                            onTap: isHadir
+                                ? () => _showPhotoDialog(photoPath)
+                                : () => _navigateToCamera(jadwal),
+                            showPhotoIcon: isHadir,
+                          ),
+                        );
+                      }),
 
-                        if (jadwalList.isEmpty)
-                          const Center(
-                            child: Padding(
-                              padding: EdgeInsets.only(top: 20.0),
-                              child: Text(
-                                "Tidak ada jadwal kelas untuk hari ini.",
-                                style: TextStyle(color: Colors.white70),
-                              ),
+                      if (jadwalList.isEmpty)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 20.0),
+                            child: Text(
+                              "Tidak ada jadwal kelas untuk hari ini.",
+                              style: TextStyle(color: Colors.white70),
                             ),
                           ),
+                        ),
 
-                        const SizedBox(height: 40),
-                      ],
-                    ),
+                      const SizedBox(height: 60),
+                    ],
                   ),
                 ),
               ),
@@ -311,9 +349,10 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
     );
   }
 
-  Widget _buildRekapCard(String val, String label, Color bgColor, Color textColor) {
+  Widget _buildRekapCard(
+      String val, String label, Color bgColor, Color textColor) {
     return Container(
-      width: (MediaQuery.of(context).size.width - 48 - 40 - 24) / 3, // Screen width - page padding - card padding - gaps
+      width: (MediaQuery.of(context).size.width - 48 - 40 - 24) / 3,
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         color: bgColor,
@@ -344,7 +383,9 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
   }
 
   Widget _buildScheduleCard({
+    required String kode,
     required String title,
+    required String dosen,
     required String time,
     required String room,
     required String statusText,
@@ -360,7 +401,7 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
         borderRadius: BorderRadius.circular(30),
         boxShadow: const [
           BoxShadow(
-            color: Color(0xFF14532D), // Solid dark green shadow offset
+            color: Color(0xFF14532D),
             blurRadius: 0,
             spreadRadius: 0,
             offset: Offset(-6, 6),
@@ -372,14 +413,54 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Centered Title
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+          // Kode and Title
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF14532D).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  kode,
+                  style: const TextStyle(
+                    color: Color(0xFF14532D),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Dosen
+          Row(
+            children: [
+              const Icon(Icons.person_outline, size: 14, color: Colors.black54),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  dosen,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           // Bottom Row
@@ -403,7 +484,8 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.circle, size: 4, color: Colors.black45),
+                        const Icon(Icons.circle,
+                            size: 4, color: Colors.black45),
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
@@ -436,16 +518,18 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
                           color: const Color(0xFF14532D).withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.image_outlined, color: Color(0xFF14532D), size: 16),
+                        child: const Icon(Icons.image_outlined,
+                            color: Color(0xFF14532D), size: 16),
                       ),
                     ),
                   GestureDetector(
                     onTap: showPhotoIcon ? null : onTap,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: statusBgColor,
-                        borderRadius: BorderRadius.circular(16), // Rounded pill
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
                         statusText,
@@ -470,13 +554,15 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
     final result = await Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const PresensiScreen(),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const PresensiScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0, 1),
               end: Offset.zero,
-            ).animate(CurvedAnimation(parent: animation, curve: Curves.easeInOut)),
+            ).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeInOut)),
             child: child,
           );
         },
@@ -494,11 +580,12 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
 
   void _showPhotoDialog(String? imagePath) {
     if (imagePath == null) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -510,7 +597,10 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
               child: const Text(
                 "Bukti Presensi",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16),
               ),
             ),
             Image.file(
@@ -521,7 +611,9 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Tutup", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+              child: const Text("Tutup",
+                  style: TextStyle(
+                      color: Colors.black87, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 8),
           ],

@@ -1171,6 +1171,7 @@ class _MainNavigationState extends State<MainNavigation> {
                   ),
                   onPressed: () {
                     Navigator.pop(context); // Close dialog
+                    JadwalService.instance.clearData(); // Clear persistent singleton data on logout
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(builder: (context) => const LoginScreen()),
                       (route) => false,
