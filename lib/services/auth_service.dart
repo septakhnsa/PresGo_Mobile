@@ -51,6 +51,43 @@ class AuthService {
       };
     }
   }
+
+  static Future<Map<String, dynamic>> register(
+      String name, String email, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/register'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Registrasi berhasil',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Registrasi gagal',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error koneksi: $e',
+      };
+    }
+  }
   static Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
       final response = await http.post(

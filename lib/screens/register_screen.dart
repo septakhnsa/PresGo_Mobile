@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/logo_card.dart';
+import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,15 +12,13 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _nimController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
-  void _handleRegister() {
+  Future<void> _handleRegister() async {
     if (_nameController.text.trim().isEmpty ||
-        _nimController.text.trim().isEmpty ||
         _emailController.text.trim().isEmpty ||
         _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -43,14 +42,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        _navigateToLogin();
-      }
+    final result = await AuthService.register(
+      _nameController.text.trim(),
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
     });
+
+    if (result['success']) {
+      _navigateToLogin();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text(result['message'])),
+            ],
+          ),
+          backgroundColor: AppColors.redAlpa,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
   }
 
   void _navigateToLogin() {
@@ -75,7 +96,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _nimController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -151,37 +171,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // 4. NIM Field
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "NIM",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: TextFormField(
-                    controller: _nimController,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
-                    decoration: const InputDecoration(
-                      hintText: "ketik disini..",
-                      hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
 
                 // 5. Email Field
                 Align(

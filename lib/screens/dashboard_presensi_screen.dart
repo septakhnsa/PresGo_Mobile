@@ -298,57 +298,62 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
                       ),
                       const SizedBox(height: 28),
 
-                      // Jadwal Hari Ini Title
-                      const Text(
-                        "Jadwal Hari Ini",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Class Schedule Cards
-                      ...jadwalList.map((jadwal) {
-                        final isHadir = jadwal.status == 'Sudah Absen';
-
-                        // Use foto directly from model (synced from API or current session)
-                        final String? photoPath = isHadir ? jadwal.foto : null;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 24),
-                          child: _buildScheduleCard(
-                            kode: jadwal.kode,
-                            title: jadwal.mataKuliah,
-                            dosen: jadwal.dosen,
-                            time: "${jadwal.jamMulai} - ${jadwal.jamSelesai}",
-                            room: jadwal.ruangan,
-                            statusText: isHadir ? "Hadir" : "Belum",
-                            statusBgColor: isHadir
-                                ? const Color(0xFFDCFCE7)
-                                : const Color(0xFFFEF3C7),
-                            statusTextColor: isHadir
-                                ? const Color(0xFF14532D)
-                                : Colors.orange.shade800,
-                            onTap: isHadir
-                                ? () => _showPhotoDialog(photoPath)
-                                : () => _navigateToCamera(jadwal),
-                            showPhotoIcon: isHadir,
+                      // Verification State Check
+                      if (widget.user['nim'] == null)
+                        _buildVerificationPendingUI()
+                      else ...[
+                        // Jadwal Hari Ini Title
+                        const Text(
+                          "Jadwal Hari Ini",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
-                        );
-                      }),
+                        ),
+                        const SizedBox(height: 16),
 
-                      if (jadwalList.isEmpty)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.only(top: 20.0),
-                            child: Text(
-                              "Tidak ada jadwal kelas untuk hari ini.",
-                              style: TextStyle(color: Colors.white70),
+                        // Class Schedule Cards
+                        ...jadwalList.map((jadwal) {
+                          final isHadir = jadwal.status == 'Sudah Absen';
+
+                          // Use foto directly from model (synced from API or current session)
+                          final String? photoPath = isHadir ? jadwal.foto : null;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 24),
+                            child: _buildScheduleCard(
+                              kode: jadwal.kode,
+                              title: jadwal.mataKuliah,
+                              dosen: jadwal.dosen,
+                              time: "${jadwal.jamMulai} - ${jadwal.jamSelesai}",
+                              room: jadwal.ruangan,
+                              statusText: isHadir ? "Hadir" : "Belum",
+                              statusBgColor: isHadir
+                                  ? const Color(0xFFDCFCE7)
+                                  : const Color(0xFFFEF3C7),
+                              statusTextColor: isHadir
+                                  ? const Color(0xFF14532D)
+                                  : Colors.orange.shade800,
+                              onTap: isHadir
+                                  ? () => _showPhotoDialog(photoPath)
+                                  : () => _navigateToCamera(jadwal),
+                              showPhotoIcon: isHadir,
+                            ),
+                          );
+                        }),
+
+                        if (jadwalList.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.only(top: 20.0),
+                              child: Text(
+                                "Tidak ada jadwal kelas untuk hari ini.",
+                                style: TextStyle(color: Colors.white70),
+                              ),
                             ),
                           ),
-                        ),
+                      ],
 
                       const SizedBox(height: 60),
                     ],
@@ -558,6 +563,51 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
                 ],
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerificationPendingUI() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0xFF14532D),
+            blurRadius: 0,
+            spreadRadius: 0,
+            offset: Offset(-6, 6),
+          )
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.hourglass_empty_rounded, size: 64, color: Colors.orange.shade400),
+          const SizedBox(height: 16),
+          const Text(
+            "Menunggu Verifikasi Admin",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF14532D),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            "Akun Anda sedang ditinjau. Jadwal perkuliahan akan muncul setelah Admin memverifikasi dan memberikan NIM Anda.",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black54,
+              height: 1.5,
+            ),
           ),
         ],
       ),
