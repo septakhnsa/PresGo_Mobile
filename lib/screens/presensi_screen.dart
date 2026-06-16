@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -15,7 +16,11 @@ class PresensiScreen extends StatefulWidget {
   State<PresensiScreen> createState() => _PresensiScreenState();
 }
 
+enum PresensiStep { camera, confirm, recap }
+
 class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProviderStateMixin {
+  PresensiStep _currentStep = PresensiStep.camera;
+  String? _photoPath;
   late AnimationController _scannerController;
   late Animation<double> _scannerAnimation;
   bool _isVerifying = false;
@@ -331,12 +336,11 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
         _isVerifying = false;
       });
 
-      // 3. Navigate back to Dashboard and pass the photo path and class name
+      // 3. Instead of popping immediately, go to confirm step
       if (photo != null) {
-        Navigator.pop(context, {
-          'status': 'success',
-          'photoPath': photo.path,
-          'className': _selectedClass,
+        setState(() {
+          _photoPath = photo.path;
+          _currentStep = PresensiStep.confirm;
         });
       } else {
         Navigator.pop(context); // Fallback
@@ -353,6 +357,15 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    if (_currentStep == PresensiStep.confirm) {
+      return _buildConfirmScreen();
+    } else if (_currentStep == PresensiStep.recap) {
+      return _buildRecapScreen();
+    }
+    return _buildCameraScreen();
+  }
+
+  Widget _buildCameraScreen() {
     // Dynamic styles based on face detection status
     final Color statusColor = _isFaceDetected ? AppColors.greenHadir : AppColors.redAlpa;
     final String statusText = _isFaceDetected ? "Wajah Cocok: Terverifikasi" : "Wajah Tidak Terdeteksi";
@@ -735,6 +748,287 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildConfirmScreen() {
+    return Scaffold(
+      backgroundColor: const Color(0xFF14532D), // Dark green background
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          onPressed: () {
+            setState(() {
+              _currentStep = PresensiStep.camera;
+            });
+            if (!kIsWeb) {
+              _cameraController?.startImageStream((CameraImage image) {
+                if (_isDetecting) return;
+                _isDetecting = true;
+                _processCameraImage(image);
+              });
+            }
+          },
+        ),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Konfirmasi Foto",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: _photoPath != null
+                          ? Image.file(File(_photoPath!), height: 300, width: double.infinity, fit: BoxFit.cover)
+                          : Container(height: 300, color: Colors.grey.shade200),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEAB308), // Yellow
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _currentStep = PresensiStep.camera;
+                          });
+                          if (!kIsWeb) {
+                            _cameraController?.startImageStream((CameraImage image) {
+                              if (_isDetecting) return;
+                              _isDetecting = true;
+                              _processCameraImage(image);
+                            });
+                          }
+                        },
+                        child: const Text("ULANGI FOTO", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A), // Green
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _currentStep = PresensiStep.recap;
+                          });
+                        },
+                        child: const Text("ABSEN SEKARANG", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Decorative Green Line
+              Positioned(
+                top: 24,
+                left: 24,
+                child: Container(
+                  width: 6,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF16A34A),
+                    borderRadius: BorderRadius.only(topRight: Radius.circular(4), bottomRight: Radius.circular(4)),
+                  ),
+                ),
+              ),
+              // Decorative Red Line
+              Positioned(
+                bottom: 24,
+                right: 24,
+                child: Container(
+                  width: 6,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.only(topLeft: Radius.circular(4), bottomLeft: Radius.circular(4)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecapScreen() {
+    final now = DateTime.now();
+    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')} WIB";
+    final dateStr = "${now.day.toString().padLeft(2, '0')}-${now.month.toString().padLeft(2, '0')}-${now.year}";
+    
+    String locationName = "Kampus Borkoh STMIK Widya Utama";
+    String coordinateStr = "Mencari...";
+    if (_currentPosition != null) {
+      coordinateStr = "Longitude: ${_currentPosition!.longitude.toStringAsFixed(6)}\nLatitude: ${_currentPosition!.latitude.toStringAsFixed(6)}";
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF14532D),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false, // No back button on recap
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.bottomCenter,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Photo with Timestamp overlay
+                      ClipRRect(
+                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+                        child: Stack(
+                          children: [
+                            _photoPath != null
+                                ? Image.file(File(_photoPath!), height: 250, width: double.infinity, fit: BoxFit.cover)
+                                : Container(height: 250, color: Colors.grey.shade200),
+                            Positioned(
+                              bottom: 8,
+                              left: 12,
+                              child: Text(
+                                "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')} ${now.day.toString().padLeft(2, '0')}-${now.month.toString().padLeft(2, '0')}-${now.year}",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildRecapItem("Jam Kehadiran", timeStr),
+                            const SizedBox(height: 12),
+                            _buildRecapItem("Waktu Terlambat", "00:00:00"),
+                            const SizedBox(height: 12),
+                            _buildRecapItem("Lokasi", locationName),
+                            const SizedBox(height: 12),
+                            _buildRecapItem("Koordinat Posisi", coordinateStr),
+                            const SizedBox(height: 32),
+                            // Success Button
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.pop(context, {
+                                  'status': 'success',
+                                  'photoPath': _photoPath,
+                                  'className': _selectedClass,
+                                });
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  "Presensi Berhasil",
+                                  style: TextStyle(
+                                    color: Color(0xFF16A34A),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Big green checkmark floating at the bottom boundary
+                Positioned(
+                  bottom: 0,
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF16A34A), width: 3),
+                    ),
+                    child: const Icon(Icons.check, color: Color(0xFF16A34A), size: 36),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecapItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.black54,
+            fontSize: 12,
+          ),
+        ),
+      ],
     );
   }
 }

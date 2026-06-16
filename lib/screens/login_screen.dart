@@ -7,6 +7,7 @@ import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 import '../services/auth_service.dart';
 import '../services/jadwal_service.dart';
+import '../services/notification_service.dart';
 import 'admin_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -80,6 +81,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       // Ambil jadwal dari database setelah login berhasil
       await JadwalService.instance.fetchJadwalFromApi();
+
+      // Store user data for notification tap navigation
+      NotificationService.setCurrentUser(result['user']);
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(

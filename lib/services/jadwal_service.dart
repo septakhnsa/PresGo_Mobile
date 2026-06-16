@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/jadwal_model.dart';
 import '../models/presensi_model.dart';
+import 'notification_service.dart';
 import 'auth_service.dart';
 
 class JadwalService {
@@ -62,6 +63,7 @@ class JadwalService {
         
         isLoadedFromApi = true;
         print('✅ Jadwal berhasil diambil dari API: ${allJadwal.length} jadwal');
+        NotificationService.instance.scheduleClassReminders(allJadwal);
       } else {
         print('⚠️ API jadwal gagal (${response.statusCode}), pakai data statis');
         _loadStaticJadwal();
@@ -75,6 +77,7 @@ class JadwalService {
   void _loadStaticJadwal() {
     allJadwal = List.from(_staticJadwal);
     isLoadedFromApi = false;
+    NotificationService.instance.scheduleClassReminders(allJadwal);
   }
 
   // ── NOTIFIKASI ─────────────────────────────────────────────────────────────
@@ -198,6 +201,12 @@ class JadwalService {
         'bodyText': 'Presensi Berhasil!\n${old.mataKuliah} tercatat hadir.',
         'subjectName': old.mataKuliah,
       });
+
+      NotificationService.instance.showInstantNotification(
+        id: DateTime.now().millisecondsSinceEpoch % 100000,
+        title: 'Presensi Berhasil',
+        body: '${old.mataKuliah} tercatat hadir.',
+      );
     }
   }
 

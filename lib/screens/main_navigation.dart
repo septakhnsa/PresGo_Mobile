@@ -25,10 +25,12 @@ String _formatDateId(DateTime d) {
 
 class MainNavigation extends StatefulWidget {
   final Map<String, dynamic> user;
+  final bool initialShowNotification;
 
   const MainNavigation({
     super.key,
     required this.user,
+    this.initialShowNotification = false,
   });
 
   @override
@@ -39,7 +41,7 @@ _MainNavigationState();
 class _MainNavigationState extends State<MainNavigation> {
   String _activeTab = "Home"; // "Profile", "Home", "History"
   bool _showWelcomeModal = true;
-  bool _showNotificationPage = false;
+  late bool _showNotificationPage;
 
   // Koordinat Kampus STMIK Widya Utama - Jl. Sunan Kalijaga, Berkoh, Purwokerto Selatan
   static const double _campusLat = -7.4390;
@@ -77,6 +79,9 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
+    _showNotificationPage = widget.initialShowNotification;
+    // If opening directly to notifications, hide the welcome modal
+    if (_showNotificationPage) _showWelcomeModal = false;
     _mapController = MapController();
     _startLocationTracking();
     
@@ -871,21 +876,42 @@ class _MainNavigationState extends State<MainNavigation> {
   // NOTIFICATION PAGE: Figma Column 4
   Widget _buildNotificationPage() {
     return Container(
-      color: const Color(0xFFF8FAFC), // Off-white exactly like Figma
+      color: const Color(0xFFE5E5E5), // Off-white exactly like Figma
       child: Column(
         children: [
           // Custom green Notification header banner
           Container(
             width: double.infinity,
             color: AppColors.tosca,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: const Text(
-              "Notifikasi 🔔",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+            padding: const EdgeInsets.only(left: 24, right: 24, top: 40, bottom: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Notifikasi 🔔",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatDateId(_now),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const Icon(Icons.more_horiz, color: Colors.white),
+              ],
             ),
           ),
 
@@ -893,16 +919,10 @@ class _MainNavigationState extends State<MainNavigation> {
             child: ListView(
               padding: const EdgeInsets.all(24),
               children: [
-                Text(
-                  _formatDateId(_now).toLowerCase(),
-                  style: const TextStyle(color: Colors.black38, fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-
                 // Dynamic notification list from JadwalService
                 ...JadwalService.instance.notifications.map((notif) {
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.only(bottom: 24), // Increased spacing for the offset shadow
                     child: _buildNotificationCard(
                       isActionable: notif['isActionable'] ?? false,
                       title: notif['title'] ?? 'PresGo',
@@ -917,34 +937,57 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
           ),
 
-          // Bottom circular exit back button (red with gold border)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 40.0),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _showNotificationPage = false;
-                });
-              },
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.goldAccent, width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.red.withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    )
-                  ],
+          // Bottom navigation / exit banner with cutout
+          SizedBox(
+            height: 80,
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              clipBehavior: Clip.none,
+              children: [
+                // The dark green bottom block
+                Container(
+                  width: double.infinity,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: AppColors.tosca,
+                  ),
                 ),
-                child: const Center(
-                  child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                // The semi-circle cutout mask
+                Positioned(
+                  top: -5,
+                  child: Container(
+                    width: 70,
+                    height: 70,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE5E5E5),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ),
-              ),
+                // The actual red button
+                Positioned(
+                  top: 5,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showNotificationPage = false;
+                      });
+                    },
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.red, width: 2),
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.exit_to_app_rounded, color: Colors.red, size: 28),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -972,139 +1015,149 @@ class _MainNavigationState extends State<MainNavigation> {
         }
       },
       child: Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withOpacity(0.04)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              // Mini White Circle with green P inside
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.tosca.withOpacity(0.15), width: 1),
-                ),
-                child: const Center(
-                  child: Text(
-                    "P",
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      color: AppColors.tosca,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.tosca,
+              blurRadius: 0,
+              spreadRadius: 0,
+              offset: Offset(-6, 6),
+            )
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Mini White Circle with green P inside
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.tosca.withOpacity(0.3), width: 1.5),
               ),
-              const SizedBox(width: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppColors.tosca,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12.5,
-                ),
-              ),
-              const Text(
-                " • ",
-                style: TextStyle(color: Colors.black26),
-              ),
-              Text(
-                timeText,
-                style: const TextStyle(
-                  color: Colors.black26,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-              const Spacer(),
-              Flexible(
+              child: const Center(
                 child: Text(
-                  headerText,
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  "P",
+                  style: TextStyle(
+                    fontFamily: 'Georgia',
+                    color: AppColors.tosca,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            bodyText,
-            style: TextStyle(
-              color: Colors.grey.shade800,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
             ),
-          ),
-          if (isActionable) ...[
-            const SizedBox(height: 16),
-            const Divider(color: Colors.black12, height: 1),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // "Abaikan" link
-                GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Notifikasi diabaikan.")),
-                    );
-                  },
-                  child: const Text(
-                    "Abaikan",
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: AppColors.tosca,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const Text(
+                        " • ",
+                        style: TextStyle(color: Colors.black45),
+                      ),
+                      Text(
+                        timeText,
+                        style: const TextStyle(
+                          color: Colors.black45,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    headerText,
+                    style: const TextStyle(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
                     ),
                   ),
-                ),
-                const SizedBox(width: 24),
-                // "Presensi Sekarang" green button
-                ElevatedButton(
-                  onPressed: () => _navigateToCamera(subject: subjectName),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.tosca,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                  const SizedBox(height: 4),
+                  Text(
+                    bodyText,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      height: 1.4,
                     ),
                   ),
-                  child: const Text(
-                    "Presensi Sekarang",
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
+                  if (isActionable) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        // "Presensi Sekarang" green button
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _navigateToCamera(subject: subjectName),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.tosca,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                            child: const Text(
+                              "Presensi Sekarang",
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // "Abaikan" grey button
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Notifikasi diabaikan.")),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFE5E5E5),
+                              foregroundColor: Colors.black54,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                            child: const Text(
+                              "Abaikan",
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ]
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // FLOATING ACTION BUTTON: Camera on Home, Logout on others
   Widget _buildFloatingActionButton() {
