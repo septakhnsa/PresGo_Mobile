@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../models/jadwal_model.dart';
 import '../models/presensi_model.dart';
 import '../services/jadwal_service.dart';
+import '../services/auth_service.dart';
 import 'presensi_screen.dart';
 
 class DashboardPresensiScreen extends StatefulWidget {
@@ -23,6 +24,22 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
   final String _profileAvatarUrl =
       "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop";
 
+  bool _isRefreshing = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshJadwalStatus();
+  }
+
+  Future<void> _refreshJadwalStatus() async {
+    setState(() => _isRefreshing = true);
+    await JadwalService.instance.fetchJadwalFromApi();
+    if (mounted) {
+      setState(() => _isRefreshing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final jadwalList = JadwalService.instance.getJadwalHariIni();
@@ -31,10 +48,14 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
       backgroundColor: const Color(0xFF14532D),
       body: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // 1. App Bar and Profile Header (Dark Green Area)
+        child: RefreshIndicator(
+          onRefresh: _refreshJadwalStatus,
+          color: const Color(0xFF14532D),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              children: [
+                // 1. App Bar and Profile Header (Dark Green Area)
               Padding(
                 padding: const EdgeInsets.only(
                     left: 24.0, right: 24.0, top: 8.0, bottom: 40.0),
@@ -292,16 +313,8 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
                       ...jadwalList.map((jadwal) {
                         final isHadir = jadwal.status == 'Sudah Absen';
 
-                        String? photoPath;
-                        if (isHadir) {
-                          try {
-                            final hist = JadwalService.instance.presensiHistory
-                                .firstWhere((h) => h.jadwalId == jadwal.id);
-                            photoPath = hist.foto;
-                          } catch (e) {
-                            photoPath = null;
-                          }
-                        }
+                        // Use foto directly from model (synced from API or current session)
+                        final String? photoPath = isHadir ? jadwal.foto : null;
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 24),
@@ -346,8 +359,9 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildRekapCard(
       String val, String label, Color bgColor, Color textColor) {
@@ -571,15 +585,120 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
 
     if (result != null && result is Map) {
       if (result['status'] == 'success') {
-        setState(() {
-          JadwalService.instance.markHadir(jadwal.id, result['photoPath']);
-        });
+        if (!mounted) return;
+        
+        // Tampilkan dialog loading pengiriman presensi
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return const Dialog(
+              backgroundColor: Colors.white,
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24.0, horizontal: 20.0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF14532D)),
+                    ),
+                    SizedBox(width: 20),
+                    Text(
+                      "Mengirim presensi...",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+
+        // Kirim presensi ke server API Laravel
+        final submitResult = await JadwalService.instance.submitPresensiApi(
+          jadwalId: jadwal.id,
+          photoPath: result['photoPath'],
+          latitude: result['latitude'],
+          longitude: result['longitude'],
+        );
+
+        // Tutup dialog loading
+        if (mounted) {
+          Navigator.pop(context);
+        }
+
+        if (submitResult['success'] == true) {
+          setState(() {
+            JadwalService.instance.markHadir(jadwal.id, result['photoPath']);
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(submitResult['message'] ?? 'Presensi berhasil dicatat!'),
+                backgroundColor: const Color(0xFF16A34A),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(submitResult['message'] ?? 'Gagal melakukan presensi.'),
+                backgroundColor: Colors.redAccent,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
       }
     }
   }
 
   void _showPhotoDialog(String? imagePath) {
-    if (imagePath == null) return;
+    if (imagePath == null || imagePath.isEmpty) return;
+
+    // Determine if path is a server path (from API) or a local file path
+    Widget imageWidget;
+    if (imagePath.startsWith('/') || imagePath.startsWith('file://') ||
+        (imagePath.length > 2 && imagePath[1] == ':')) {
+      // Local file path (from current session photo)
+      imageWidget = Image.file(
+        File(imagePath),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: 300,
+        errorBuilder: (ctx, err, stack) => const Padding(
+          padding: EdgeInsets.all(32),
+          child: Icon(Icons.broken_image, size: 64, color: Colors.grey),
+        ),
+      );
+    } else {
+      // Server relative path (from API: e.g. "presensi_photos/xxx.jpg")
+      final storageUrl = AuthService.baseUrl.replaceAll('/api', '/storage/$imagePath');
+      imageWidget = Image.network(
+        storageUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: 300,
+        loadingBuilder: (ctx, child, progress) {
+          if (progress == null) return child;
+          return const SizedBox(
+            height: 300,
+            child: Center(child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF14532D)),
+            )),
+          );
+        },
+        errorBuilder: (ctx, err, stack) => const Padding(
+          padding: EdgeInsets.all(32),
+          child: Icon(Icons.broken_image, size: 64, color: Colors.grey),
+        ),
+      );
+    }
 
     showDialog(
       context: context,
@@ -603,12 +722,7 @@ class _DashboardPresensiScreenState extends State<DashboardPresensiScreen> {
                     fontSize: 16),
               ),
             ),
-            Image.file(
-              File(imagePath),
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 300,
-            ),
+            imageWidget,
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("Tutup",

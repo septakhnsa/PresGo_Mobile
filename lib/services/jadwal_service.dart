@@ -63,6 +63,63 @@ class JadwalService {
         
         isLoadedFromApi = true;
         print('✅ Jadwal berhasil diambil dari API: ${allJadwal.length} jadwal');
+        
+        final now = DateTime.now();
+        final todayStr = "${_getHariString(now.weekday)}, ${now.day} ${_getBulanString(now.month)} ${now.year}";
+
+        String formatServerDate(String? dateStr) {
+          if (dateStr == null) return todayStr;
+          try {
+            final parsed = DateTime.parse(dateStr);
+            return "${_getHariString(parsed.weekday)}, ${parsed.day} ${_getBulanString(parsed.month)} ${parsed.year}";
+          } catch (_) {
+            return dateStr;
+          }
+        }
+
+        for (var j in allJadwal) {
+          print('   📋 ${j.mataKuliah} (id:${j.id}) → status: "${j.status}"');
+          if (j.status == 'Sudah Absen') {
+            final formattedDate = formatServerDate(j.tanggalAbsen);
+
+            // 1. Add to history if not exists
+            bool historyExists = presensiHistory.any((h) => h.jadwalId == j.id && h.tanggal == formattedDate);
+            if (!historyExists) {
+              presensiHistory.insert(0, PresensiModel(
+                id: 'api_${j.id}',
+                jadwalId: j.id,
+                kode: j.kode,
+                mataKuliah: j.mataKuliah,
+                dosen: j.dosen,
+                ruangan: j.ruangan,
+                jamMulai: j.jamMulai,
+                jamSelesai: j.jamSelesai,
+                tanggal: formattedDate,
+                jamAbsen: j.jamAbsen ?? j.jamMulai,
+                status: 'Hadir',
+                method: 'Face & GPS',
+                foto: j.foto,
+              ));
+            }
+
+            // 2. Remove actionable reminder
+            notifications.removeWhere((n) => n['subjectName'] == j.mataKuliah && n['isActionable'] == true);
+
+            // 3. Add to success notifications if not exists
+            bool notifExists = notifications.any((n) => n['subjectName'] == j.mataKuliah && n['headerText'] == 'Presensi Berhasil');
+            if (!notifExists) {
+              notifications.insert(0, {
+                'id': 'notif_success_api_${j.id}',
+                'isActionable': false,
+                'title': 'PresGo',
+                'timeText': j.jamAbsen ?? j.jamMulai,
+                'headerText': 'Presensi Berhasil',
+                'bodyText': 'Presensi Berhasil!\n${j.mataKuliah} tercatat hadir.',
+                'subjectName': j.mataKuliah,
+              });
+            }
+          }
+        }
         NotificationService.instance.scheduleClassReminders(allJadwal);
       } else {
         print('⚠️ API jadwal gagal (${response.statusCode}), pakai data statis');
@@ -163,44 +220,123 @@ class JadwalService {
     return allJadwal.where((j) => j.hari == hariIni).toList();
   }
 
+  // ── SUBMIT PRESENSI KE API ──────────────────────────────────────────────────
+  Future<Map<String, dynamic>> submitPresensiApi({
+    required String jadwalId,
+    required String photoPath,
+    required double? latitude,
+    required double? longitude,
+  }) async {
+    final token = AuthService.authToken;
+    if (token == null) {
+      return {'success': false, 'message': 'Token tidak ditemukan. Silakan login kembali.'};
+    }
+
+    try {
+      final uri = Uri.parse('${AuthService.baseUrl}/presensi/submit');
+      final request = http.MultipartRequest('POST', uri);
+
+      // Add Headers
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Accept'] = 'application/json';
+
+      // Add Fields
+      request.fields['jadwal_id'] = jadwalId;
+      if (latitude != null) {
+        request.fields['latitude'] = latitude.toString();
+      }
+      if (longitude != null) {
+        request.fields['longitude'] = longitude.toString();
+      }
+
+      // Add File
+      final file = await http.MultipartFile.fromPath(
+        'photo',
+        photoPath,
+      );
+      request.files.add(file);
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('Presensi Submit Status Code: ${response.statusCode}');
+      print('Presensi Submit Response Body: ${response.body}');
+
+      final resData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': resData['message'] ?? 'Presensi berhasil dicatat!',
+          'data': resData['data']
+        };
+      } else {
+        return {
+          'success': false,
+          'message': resData['message'] ?? 'Gagal melakukan presensi. Silakan coba lagi.'
+        };
+      }
+    } catch (e) {
+      print('Error submitPresensiApi: $e');
+      return {
+        'success': false,
+        'message': 'Koneksi gagal: $e'
+      };
+    }
+  }
+
   // ── MARK HADIR ─────────────────────────────────────────────────────────────
   void markHadir(String jadwalId, String fotoPath) {
     int index = allJadwal.indexWhere((j) => j.id == jadwalId);
     if (index != -1) {
       final old = allJadwal[index];
-      allJadwal[index] = old.copyWith(status: 'Sudah Absen');
-
       final now = DateTime.now();
       final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
       final dateStr = "${_getHariString(now.weekday)}, ${now.day} ${_getBulanString(now.month)} ${now.year}";
 
-      presensiHistory.insert(0, PresensiModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        jadwalId: old.id,
-        kode: old.kode,
-        mataKuliah: old.mataKuliah,
-        dosen: old.dosen,
-        ruangan: old.ruangan,
-        jamMulai: old.jamMulai,
-        jamSelesai: old.jamSelesai,
-        tanggal: dateStr,
-        jamAbsen: timeStr,
-        status: 'Hadir',
-        method: 'Face & GPS',
+      // Update model with status + foto so photo icon works immediately
+      allJadwal[index] = old.copyWith(
+        status: 'Sudah Absen',
         foto: fotoPath,
-      ));
+        jamAbsen: timeStr,
+        tanggalAbsen: dateStr,
+      );
+
+      // Add to persisted history
+      bool historyExists = presensiHistory.any((h) => h.jadwalId == jadwalId);
+      if (!historyExists) {
+        presensiHistory.insert(0, PresensiModel(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          jadwalId: old.id,
+          kode: old.kode,
+          mataKuliah: old.mataKuliah,
+          dosen: old.dosen,
+          ruangan: old.ruangan,
+          jamMulai: old.jamMulai,
+          jamSelesai: old.jamSelesai,
+          tanggal: dateStr,
+          jamAbsen: timeStr,
+          status: 'Hadir',
+          method: 'Face & GPS',
+          foto: fotoPath,
+        ));
+      }
 
       notifications.removeWhere((n) => n['subjectName'] == old.mataKuliah && n['isActionable'] == true);
       
-      notifications.insert(0, {
-        'id': 'notif_success_${DateTime.now().millisecondsSinceEpoch}',
-        'isActionable': false,
-        'title': 'PresGo',
-        'timeText': timeStr,
-        'headerText': 'Presensi Berhasil',
-        'bodyText': 'Presensi Berhasil!\n${old.mataKuliah} tercatat hadir.',
-        'subjectName': old.mataKuliah,
-      });
+      bool notifExists = notifications.any((n) => n['subjectName'] == old.mataKuliah && n['headerText'] == 'Presensi Berhasil');
+      if (!notifExists) {
+        notifications.insert(0, {
+          'id': 'notif_success_${DateTime.now().millisecondsSinceEpoch}',
+          'isActionable': false,
+          'title': 'PresGo',
+          'timeText': timeStr,
+          'headerText': 'Presensi Berhasil',
+          'bodyText': 'Presensi Berhasil!\n${old.mataKuliah} tercatat hadir.',
+          'subjectName': old.mataKuliah,
+        });
+      }
 
       NotificationService.instance.showInstantNotification(
         id: DateTime.now().millisecondsSinceEpoch % 100000,

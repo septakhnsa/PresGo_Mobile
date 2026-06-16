@@ -8,6 +8,9 @@ class JadwalModel {
   final String jamMulai;
   final String jamSelesai;
   final String status; // "Sudah Absen", "Belum Absen"
+  final String? foto;
+  final String? jamAbsen;
+  final String? tanggalAbsen;
 
   JadwalModel({
     required this.id,
@@ -19,6 +22,9 @@ class JadwalModel {
     required this.jamMulai,
     required this.jamSelesai,
     required this.status,
+    this.foto,
+    this.jamAbsen,
+    this.tanggalAbsen,
   });
 
   factory JadwalModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +38,9 @@ class JadwalModel {
       jamMulai: json['jamMulai'] ?? json['jam_mulai'] ?? '',
       jamSelesai: json['jamSelesai'] ?? json['jam_selesai'] ?? '',
       status: json['status'] ?? 'Belum Absen',
+      foto: json['foto'],
+      jamAbsen: json['jamAbsen'] ?? json['jam_absen'],
+      tanggalAbsen: json['tanggalAbsen'] ?? json['tanggal_absen'],
     );
   }
 
@@ -46,10 +55,13 @@ class JadwalModel {
       'jamMulai': jamMulai,
       'jamSelesai': jamSelesai,
       'status': status,
+      'foto': foto,
+      'jamAbsen': jamAbsen,
+      'tanggalAbsen': tanggalAbsen,
     };
   }
 
-  JadwalModel copyWith({String? status}) {
+  JadwalModel copyWith({String? status, String? foto, String? jamAbsen, String? tanggalAbsen}) {
     return JadwalModel(
       id: id,
       kode: kode,
@@ -60,6 +72,9 @@ class JadwalModel {
       jamMulai: jamMulai,
       jamSelesai: jamSelesai,
       status: status ?? this.status,
+      foto: foto ?? this.foto,
+      jamAbsen: jamAbsen ?? this.jamAbsen,
+      tanggalAbsen: tanggalAbsen ?? this.tanggalAbsen,
     );
   }
 }

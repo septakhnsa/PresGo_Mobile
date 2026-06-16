@@ -959,6 +959,8 @@ class _PresensiScreenState extends State<PresensiScreen> with SingleTickerProvid
                                   'status': 'success',
                                   'photoPath': _photoPath,
                                   'className': _selectedClass,
+                                  'latitude': _currentPosition?.latitude,
+                                  'longitude': _currentPosition?.longitude,
                                 });
                               },
                               child: Container(

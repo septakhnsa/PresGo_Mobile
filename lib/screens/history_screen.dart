@@ -351,11 +351,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                 children: [
                                                   const Icon(Icons.room_outlined, size: 12, color: Colors.black54),
                                                   const SizedBox(width: 4),
-                                                  Text(
-                                                    log["ruangan"] ?? "-",
-                                                    style: const TextStyle(
-                                                      fontSize: 11,
-                                                      color: Colors.black54,
+                                                  Expanded(
+                                                    child: Text(
+                                                      log["ruangan"] ?? "-",
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        fontSize: 11,
+                                                        color: Colors.black54,
+                                                      ),
                                                     ),
                                                   ),
                                                   const SizedBox(width: 8),

@@ -6,6 +6,9 @@ class AuthService {
 
   // Token disimpan di sini setelah login berhasil
   static String? authToken;
+  
+  // Simpan info user login saat ini
+  static Map<String, dynamic>? currentUser;
 
   static Future<Map<String, dynamic>> login(
       String login, String password) async {
@@ -29,6 +32,7 @@ class AuthService {
       if (response.statusCode == 200) {
         // Simpan token Sanctum agar bisa dipakai oleh request berikutnya
         authToken = data['token'];
+        currentUser = data['user'];
         return {
           'success': true,
           'user': data['user'],

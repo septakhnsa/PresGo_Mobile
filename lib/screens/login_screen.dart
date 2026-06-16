@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/jadwal_service.dart';
 import '../services/notification_service.dart';
 import 'admin_screen.dart';
+import 'web_admin_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -73,9 +74,12 @@ class _LoginScreenState extends State<LoginScreen> {
     await Future.delayed(const Duration(milliseconds: 300));
 
     if (result['user']['role'] == 'admin') {
+      // Store user data for notifications if needed
+      NotificationService.setCurrentUser(result['user']);
+      
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => AdminScreen(user: result['user']),
+          builder: (context) => WebAdminScreen(user: result['user']),
         ),
       );
     } else {

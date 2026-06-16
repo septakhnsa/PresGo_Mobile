@@ -49,5 +49,10 @@
 	<string>Aplikasi memerlukan akses lokasi untuk memvalidasi radius presensi dari area kampus.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Aplikasi memerlukan akses lokasi untuk memvalidasi radius presensi dari area kampus.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>
