@@ -463,7 +463,7 @@ class _MainNavigationState extends State<MainNavigation> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0xFF092A13), // 3D Solid blackish shadow
+                          color: Color(0xFF092A13),
                           blurRadius: 0,
                           spreadRadius: 0,
                           offset: Offset(-6, 6),
@@ -472,7 +472,9 @@ class _MainNavigationState extends State<MainNavigation> {
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
+                        // Kiri: Tanggal bold + STMIK kecil
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -489,13 +491,14 @@ class _MainNavigationState extends State<MainNavigation> {
                             const Text(
                               "STMIK Widya Utama",
                               style: TextStyle(
-                                fontSize: 11.5,
-                                color: Colors.black54,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
                         ),
+                        // Kanan: pertanyaan kecil + "Lihat Absensi" merah bold
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisSize: MainAxisSize.min,
@@ -525,85 +528,100 @@ class _MainNavigationState extends State<MainNavigation> {
                 );
               }
 
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                decoration: BoxDecoration(
-                  color: isNext ? const Color(0xFFFEF9C3) : const Color(0xFFDCFCE7), // Yellow if next, Green if current
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isNext ? Colors.red.shade300 : Colors.green.shade300, width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.07),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    )
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              // ── Popup ketika ada jadwal (Jadwal Berikutnya / Sedang Berlangsung) ──
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DashboardPresensiScreen(
+                        user: widget.user,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD54F),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0xFF092A13),
+                        blurRadius: 0,
+                        spreadRadius: 0,
+                        offset: Offset(-6, 6),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Kiri: Label kecil oranye + Nama MK bold + jam & ruangan kecil
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isNext ? "Jadwal Berikutnya" : "Sedang Berlangsung",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                                color: Color(0xFFE65100),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              activeJadwal.mataKuliah,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppColors.textDark,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              "${activeJadwal.jamMulai} - ${activeJadwal.jamSelesai} @ ${activeJadwal.ruangan}",
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Kanan: teks kecil + "Detail" merah bold
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisSize: MainAxisSize.min,
-                        children: [
+                        children: const [
                           Text(
-                            isNext ? "Jadwal Berikutnya" : "Sedang Berlangsung",
+                            "Absen sekarang?",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.black54,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            "Detail",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                              color: isNext ? Colors.red : Colors.green.shade800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            activeJadwal.mataKuliah,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: AppColors.textDark,
-                            ),
-                          ),
-                          Text(
-                            "${activeJadwal.jamMulai} - ${activeJadwal.jamSelesai} @ ${activeJadwal.ruangan}",
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textMuted,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: Colors.red,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DashboardPresensiScreen(
-                              user: widget.user,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isNext ? const Color(0xFFFEF08A) : Colors.green.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: isNext ? Colors.red : Colors.green, width: 1),
-                        ),
-                        child: Text(
-                          "Detail",
-                          style: TextStyle(
-                            color: isNext ? Colors.red : Colors.green.shade900,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },

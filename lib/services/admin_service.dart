@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AdminService {
-  static const String baseUrl = "http://192.168.1.11:8000/api";
+  static const String baseUrl = "http://192.168.18.66:8000/api";
 
   // ── GET /api/admin/dashboard ──────────────────────────────────────────────
   static Future<Map<String, dynamic>> getDashboard() async {

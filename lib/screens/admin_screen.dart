@@ -37,7 +37,7 @@ class _AdminScreenState extends State<AdminScreen>
   int? _totalHadir;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  final String _baseUrl = "http://192.168.1.11:8000";
+  final String _baseUrl = "http://192.168.18.66:8000";
 
   @override
   void initState() {
