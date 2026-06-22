@@ -10,6 +10,7 @@ import '../services/jadwal_service.dart';
 import '../services/notification_service.dart';
 import 'admin_screen.dart';
 import 'web_admin_screen.dart';
+import 'krs_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -83,19 +84,26 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } else {
-      // Ambil jadwal dari database setelah login berhasil
-      await JadwalService.instance.fetchJadwalFromApi();
+      if (result['success'] == true) {
+        final int krsCompleted = int.tryParse(result['user']['krs_completed']?.toString() ?? '1') ?? 1;
+        final String krsStatus = result['user']['krs_status']?.toString() ?? '';
 
-      // Store user data for notification tap navigation
-      NotificationService.setCurrentUser(result['user']);
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => MainNavigation(
-            user: result['user']
-          ),
-        ),
-      );
+        if (krsCompleted == 0) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => KrsScreen(initialPending: krsStatus == 'pending'),
+            ),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => MainNavigation(
+                user: result['user'],
+              ),
+            ),
+          );
+        }
+      }
     }
 
     return;

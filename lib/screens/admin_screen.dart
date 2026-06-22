@@ -23,6 +23,9 @@ class _AdminScreenState extends State<AdminScreen>
   bool _dashboardLoading = true;
   String? _dashboardError;
 
+  List<dynamic> _krsPendingList = [];
+  bool _krsLoading = false;
+  String? _krsError;
   // ── Jadwal state ──────────────────────────────────────────────────────────
   List<dynamic> _jadwalList = [];
   bool _jadwalLoading = true;
@@ -37,18 +40,26 @@ class _AdminScreenState extends State<AdminScreen>
   int? _totalHadir;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  final String _baseUrl = "http://192.168.18.66:8000";
+  final String _baseUrl = "http://192.168.1.12:8000";
 
   @override
   void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) setState(() {});
-    });
-    _loadDashboard();
-    _loadJadwal();
-  }
+  super.initState();
+
+  print("INITSTATE JALAN");
+
+  _tabController = TabController(length: 4, vsync: this);
+
+  _tabController.addListener(() {
+    if (_tabController.indexIsChanging) setState(() {});
+  });
+
+  Future.microtask(() async {
+    await _loadDashboard();
+    await _loadJadwal();
+    await _loadKrsPending();
+  });
+}
 
   @override
   void dispose() {
@@ -103,6 +114,38 @@ class _AdminScreenState extends State<AdminScreen>
       _jadwalLoading = false;
     });
   }
+} 
+
+Future<void> _loadKrsPending() async {
+  setState(() {
+    _krsLoading = true;
+    _krsError = null;
+  });
+
+  final result = await AdminService.getKrsPending();
+  print("HASIL KRS: ${result}");
+  print("JUMLAH KRS: ${(result['data'] ?? []).length}");
+  
+  if (!mounted) return;
+
+  if (result['success'] == true) {
+    setState(() {
+      var dataField = result['data'];
+      if (dataField is Map && dataField.containsKey('data')) {
+        _krsPendingList = dataField['data'] ?? [];
+      } else if (dataField is List) {
+        _krsPendingList = dataField;
+      } else {
+        _krsPendingList = [];
+      }
+      _krsLoading = false;
+    });
+  } else {
+    setState(() {
+      _krsError = 'Gagal load KRS';
+      _krsLoading = false;
+    });
+  }
 }
 
   Future<void> _loadPresensi(Map<String, dynamic> jadwal) async {
@@ -130,6 +173,36 @@ class _AdminScreenState extends State<AdminScreen>
         _presensiError = result['message'] ?? 'Gagal memuat presensi';
         _presensiLoading = false;
       });
+    }
+  }
+
+  Future<void> _handleApproveKrs(dynamic krsId) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator(color: AppColors.tosca)),
+    );
+
+    final result = await AdminService.approveKrs(krsId);
+    
+    if (!mounted) return;
+    Navigator.pop(context); // close loading dialog
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('KRS berhasil disetujui'),
+          backgroundColor: AppColors.greenHadir,
+        ),
+      );
+      _loadKrsPending(); // refresh list
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Gagal menyetujui KRS'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -205,6 +278,7 @@ class _AdminScreenState extends State<AdminScreen>
                   _buildDashboardTab(),
                   _buildJadwalTab(),
                   _buildRiwayatTab(),
+                  _buildKrsTab()
                 ],
               ),
             ),
@@ -324,6 +398,7 @@ class _AdminScreenState extends State<AdminScreen>
           Tab(text: 'Dashboard'),
           Tab(text: 'Jadwal'),
           Tab(text: 'Riwayat'),
+          Tab(text: 'KRS'),
         ],
       ),
     );
@@ -1421,4 +1496,94 @@ class _AdminScreenState extends State<AdminScreen>
       ),
     );
   }
+
+Widget _buildKrsTab() {
+  if (_krsLoading) {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  if (_krsError != null) {
+    return Center(
+      child: Text(
+        _krsError!,
+        style: const TextStyle(color: Colors.red),
+      ),
+    );
+  }
+
+  if (_krsPendingList.isEmpty) {
+    return const Center(
+      child: Text("Tidak ada KRS pending"),
+    );
+  }
+
+  return RefreshIndicator(
+    onRefresh: _loadKrsPending,
+    child: ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _krsPendingList.length,
+      itemBuilder: (context, i) {
+        final item = _krsPendingList[i];
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            leading: const Icon(Icons.school, color: Colors.blue),
+
+            // nama mahasiswa
+            title: Text(
+              item['mahasiswa'] ?? '-',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+
+            // mata kuliah + status
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item['nama_mk'] ?? '-'),
+                const SizedBox(height: 4),
+                Text(
+                  "Status: ${item['status'] ?? '-'}",
+                  style: TextStyle(
+                    color: item['status'] == 'pending'
+                        ? Colors.orange
+                        : Colors.green,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+
+            // SKS & Action
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "${item['sks'] ?? 0} SKS",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (item['status'] == 'pending') ...[
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () => _handleApproveKrs(item['id']),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.greenHadir,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 32),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Setujui', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }
+    }

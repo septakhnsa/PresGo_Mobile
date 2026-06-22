@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AdminService {
-  static const String baseUrl = "http://192.168.18.66:8000/api";
+  static const String baseUrl = "http://192.168.1.12:8000/api";
 
   // ── GET /api/admin/dashboard ──────────────────────────────────────────────
   static Future<Map<String, dynamic>> getDashboard() async {
@@ -112,6 +112,69 @@ class AdminService {
       };
     } catch (e) {
       return {"success": false, "message": "Exception: $e"};
+    }
+  }
+  static Future<Map<String, dynamic>> getKrsPending() async {
+  try {
+    final res = await http.get(
+      Uri.parse('$baseUrl/admin/krs/pending'),
+      headers: {"Accept": "application/json"},
+    ).timeout(const Duration(seconds: 10));
+
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+
+      if (data is Map<String, dynamic>) {
+        return data;
+      }
+
+      if (data is List) {
+        return {
+          "success": true,
+          "data": data
+        };
+      }
+
+      return {
+        "success": false,
+        "message": "Format response tidak sesuai"
+      };
+    }
+
+    return {
+      "success": false,
+      "message": "HTTP Error: ${res.statusCode}"
+    };
+  } catch (e) {
+    return {
+      "success": false,
+      "message": "Exception: $e"
+    };
+  }
+}
+
+  static Future<Map<String, dynamic>> approveKrs(dynamic krsId) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/admin/krs/approve/$krsId'),
+        headers: {"Accept": "application/json"},
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        if (data is Map<String, dynamic>) return data;
+        return {"success": true};
+      }
+
+      return {
+        "success": false,
+        "message": "HTTP Error: ${res.statusCode}"
+      };
+    } catch (e) {
+      return {
+        "success": false,
+        "message": "Exception: $e"
+      };
     }
   }
 }

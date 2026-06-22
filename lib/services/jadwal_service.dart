@@ -46,7 +46,7 @@ class JadwalService {
 
     try {
       final response = await http.get(
-        Uri.parse('${AuthService.baseUrl}/jadwal'),
+        Uri.parse('${AuthService.baseUrl}/jadwal/my'),
         headers: {
           'Accept': 'application/json',
           'Authorization': 'Bearer $token',
