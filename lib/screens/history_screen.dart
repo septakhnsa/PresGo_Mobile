@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/jadwal_service.dart';
+import '../services/auth_service.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -122,7 +123,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     List<Map<String, String>> combinedLogs = [];
 
     if (_selectedMonth == "Juni 2026") {
-      // Combine dynamic history from JadwalService
+      // 1. Ambil data asli yang "Hadir" dari JadwalService
       final realHistory = JadwalService.instance.presensiHistory.map((model) {
         return {
           "date": model.tanggal,
@@ -140,7 +141,72 @@ class _HistoryScreenState extends State<HistoryScreen> {
           "statusColor": model.status == 'Hadir' ? "green" : "red"
         };
       }).toList();
+
       combinedLogs = [...realHistory];
+
+      // 2. Tambahkan data "Absen Terlewat" untuk hari-hari yang sudah lewat sejak akun dibuat
+      final user = AuthService.currentUser;
+      DateTime createdAt = DateTime(2000, 1, 1);
+      if (user != null && user['created_at'] != null) {
+        try {
+          createdAt = DateTime.parse(user['created_at']);
+        } catch (_) {}
+      }
+
+      int month = 6;
+      int year = 2026;
+      DateTime now = DateTime.now();
+      int daysToIterate = (now.month == month && now.year == year) ? now.day : DateTime(year, month + 1, 0).day;
+
+      for (int day = daysToIterate; day >= 1; day--) {
+        DateTime date = DateTime(year, month, day);
+        
+        // Skip jika tanggal berada di masa depan atau sebelum akun dibuat
+        if (date.isAfter(now) || date.isBefore(DateTime(createdAt.year, createdAt.month, createdAt.day))) continue;
+
+        String hariStr = _getHariString(date.weekday);
+        String dateFormatted = "$hariStr, ${day.toString().padLeft(2, '0')} Juni 2026";
+
+        // Dapatkan jadwal untuk hari ini dari JadwalService
+        var jadwalHariIni = JadwalService.instance.allJadwal.where((j) => j.hari == hariStr).toList();
+
+        for (var jadwal in jadwalHariIni) {
+          // Cek apakah jadwal ini sudah ada di realHistory (Hadir)
+          bool alreadyAttended = combinedLogs.any((log) => log['date'] == dateFormatted && log['kode'] == jadwal.kode);
+          
+          if (!alreadyAttended) {
+            // Jika belum ada, dan ini adalah hari sebelum hari ini (atau sudah lewat jam kelas untuk hari ini), maka terlewat
+            bool isPast = true;
+            if (date.day == now.day) {
+               // Simple check: anggap terlewat jika kita belum absen (sudah tertangani backend, tapi secara UI kita tampilkan saja jika user minta history terlewat)
+               // Anda juga bisa menambahkan logic jam jika perlu, tapi untuk kesederhanaan, asumsikan jika belum hadir di hari ini, masuk "Absen Terlewat"
+               isPast = true; 
+            }
+
+            if (isPast) {
+              combinedLogs.add({
+                "date": dateFormatted,
+                "kode": jadwal.kode,
+                "subject": jadwal.mataKuliah,
+                "dosen": jadwal.dosen,
+                "ruangan": jadwal.ruangan,
+                "jamMulai": jadwal.jamMulai,
+                "jamSelesai": jadwal.jamSelesai,
+                "status": "Absen Terlewat",
+                "waktuHadir": "--:--:--",
+                "terlambat": "00:00:00",
+                "waktuPulang": "--:--:--",
+                "cepatPulang": "00:00:00",
+                "statusColor": "red"
+              });
+            }
+          }
+        }
+      }
+      
+      // Sort combinedLogs descending by date
+      // (Simplified: we rely on grouping logic to keep them ordered, but it's better to sort the group keys later if needed)
+
     } else {
       // Generate dummy data based on schedule for past months
       combinedLogs = _generateDummyDataForMonth(_selectedMonth);
@@ -384,38 +450,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                 ),
                                               ),
                                               const SizedBox(height: 12),
-                                              // Info Row
-                                              Row(
-                                                children: [
-                                                  // Left column
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        _buildInfoText("Waktu Hadir", log['waktuHadir']!),
-                                                        const SizedBox(height: 4),
-                                                        _buildInfoText("Terlambat", log['terlambat']!),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  // Right column
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                                      children: [
-                                                        _buildInfoText("Waktu Pulang", log['waktuPulang']!),
-                                                        const SizedBox(height: 4),
-                                                        _buildInfoText(
-                                                          "Cepat Pulang",
-                                                          log['cepatPulang']!,
-                                                          isWarning: log['cepatPulang'] != "00:00:00",
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                              // Info Row - hanya Waktu Hadir
+                                              _buildInfoText("Waktu Hadir", log['waktuHadir']!),
                                             ],
                                           ),
                                         ),

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  static const String baseUrl = "http://192.168.1.12:8000/api";
+  static const String baseUrl = "http://192.168.18.66:8000/api";
 
   // Token disimpan di sini setelah login berhasil
   static String? authToken;

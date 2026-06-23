@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'screens/dashboard_presensi_screen.dart';
 import 'services/notification_service.dart';
 
 /// Global navigator key — used by NotificationService to navigate
@@ -20,6 +21,7 @@ class PresGoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey,
+      navigatorObservers: [dashboardRouteObserver],
       title: 'PresGo Presensi Mahasiswa',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

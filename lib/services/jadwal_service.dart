@@ -82,25 +82,7 @@ class JadwalService {
           if (j.status == 'Sudah Absen') {
             final formattedDate = formatServerDate(j.tanggalAbsen);
 
-            // 1. Add to history if not exists
-            bool historyExists = presensiHistory.any((h) => h.jadwalId == j.id && h.tanggal == formattedDate);
-            if (!historyExists) {
-              presensiHistory.insert(0, PresensiModel(
-                id: 'api_${j.id}',
-                jadwalId: j.id,
-                kode: j.kode,
-                mataKuliah: j.mataKuliah,
-                dosen: j.dosen,
-                ruangan: j.ruangan,
-                jamMulai: j.jamMulai,
-                jamSelesai: j.jamSelesai,
-                tanggal: formattedDate,
-                jamAbsen: j.jamAbsen ?? j.jamMulai,
-                status: 'Hadir',
-                method: 'Face & GPS',
-                foto: j.foto,
-              ));
-            }
+            // 1. (Dihapus) Logika penambahan ke presensiHistory sekarang ditangani oleh fetchHistoryFromApi()
 
             // 2. Remove actionable reminder
             notifications.removeWhere((n) => n['subjectName'] == j.mataKuliah && n['isActionable'] == true);
@@ -220,6 +202,13 @@ class JadwalService {
     return allJadwal.where((j) => j.hari == hariIni).toList();
   }
 
+  /// Jumlah matkul hari ini yang sudah hadir (untuk badge greeting card)
+  int get hadirHariIni =>
+      getJadwalHariIni().where((j) => j.status == 'Sudah Absen').length;
+
+  /// Total matkul hari ini (untuk badge greeting card)
+  int get totalJadwalHariIni => getJadwalHariIni().length;
+
   // ── SUBMIT PRESENSI KE API ──────────────────────────────────────────────────
   Future<Map<String, dynamic>> submitPresensiApi({
     required String jadwalId,
@@ -283,6 +272,78 @@ class JadwalService {
         'success': false,
         'message': 'Koneksi gagal: $e'
       };
+    }
+  }
+
+  //baru
+  Future<Map<String, dynamic>> fetchRekapKehadiran({int? bulan, int? tahun}) async {
+  final token = AuthService.authToken;
+  if (token == null) return {'hadir': 0, 'absen': 0, 'persentase': 0};
+
+  final now = DateTime.now();
+  final b = bulan ?? now.month;
+  final t = tahun ?? now.year;
+
+  try {
+    final response = await http.get(
+      Uri.parse('${AuthService.baseUrl}/presensi/rekap?bulan=$b&tahun=$t'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+  } catch (e) {
+    print('Error fetchRekap: $e');
+  }
+  return {'hadir': 0, 'absen': 0, 'persentase': 0};
+}
+
+  Future<void> fetchHistoryFromApi() async {
+    final token = AuthService.authToken;
+    if (token == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('${AuthService.baseUrl}/presensi/history'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> historyList = data['data'];
+
+        presensiHistory.clear();
+
+        for (var h in historyList) {
+          final rawDate = h['tanggal']; // Y-m-d
+          final parsed = DateTime.parse(rawDate);
+          final formattedDate = "${_getHariString(parsed.weekday)}, ${parsed.day} ${_getBulanString(parsed.month)} ${parsed.year}";
+
+          presensiHistory.add(PresensiModel(
+            id: h['id'],
+            jadwalId: h['jadwal_id'],
+            kode: h['kode'],
+            mataKuliah: h['mataKuliah'],
+            dosen: h['dosen'],
+            ruangan: h['ruangan'],
+            jamMulai: h['jamMulai'],
+            jamSelesai: h['jamSelesai'],
+            tanggal: formattedDate,
+            jamAbsen: h['jam_masuk'],
+            status: 'Hadir',
+            method: 'Face & GPS',
+            foto: h['foto'],
+          ));
+        }
+      }
+    } catch (e) {
+      print('Error fetchHistory: $e');
     }
   }
 
@@ -372,6 +433,7 @@ class JadwalService {
     const bulan = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
     return bulan[month];
   }
+
 }
 
 

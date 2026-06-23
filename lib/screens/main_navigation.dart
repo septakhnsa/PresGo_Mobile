@@ -85,6 +85,14 @@ class _MainNavigationState extends State<MainNavigation> {
     _mapController = MapController();
     _startLocationTracking();
     
+    // Initial fetch jadwal and history from API to update badge, schedule, and history
+    JadwalService.instance.fetchJadwalFromApi().then((_) {
+      if (mounted) setState(() {});
+    });
+    JadwalService.instance.fetchHistoryFromApi().then((_) {
+      if (mounted) setState(() {});
+    });
+
     // Initial notification update
     JadwalService.instance.updateNotifications(_now);
     
@@ -767,21 +775,48 @@ class _MainNavigationState extends State<MainNavigation> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEE2E2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          "Belum absen",
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                      Builder(builder: (context) {
+                        final hadir = JadwalService.instance.hadirHariIni;
+                        final total = JadwalService.instance.totalJadwalHariIni;
+
+                        Color badgeBg;
+                        Color badgeText;
+                        String badgeLabel;
+
+                        if (total == 0) {
+                          badgeBg   = const Color(0xFFFEE2E2);
+                          badgeText = Colors.red;
+                          badgeLabel = 'Belum absen';
+                        } else if (hadir == 0) {
+                          badgeBg   = const Color(0xFFFEE2E2);
+                          badgeText = Colors.red;
+                          badgeLabel = '0/$total hadir';
+                        } else if (hadir < total) {
+                          badgeBg   = const Color(0xFFFFF3CD);
+                          badgeText = Colors.orange.shade800;
+                          badgeLabel = '$hadir/$total hadir';
+                        } else {
+                          badgeBg   = const Color(0xFFDCFCE7);
+                          badgeText = const Color(0xFF14532D);
+                          badgeLabel = '$hadir/$total hadir ✓';
+                        }
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: badgeBg,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ),
-                      ),
+                          child: Text(
+                            badgeLabel,
+                            style: TextStyle(
+                              color: badgeText,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -1313,10 +1348,16 @@ class _MainNavigationState extends State<MainNavigation> {
         orElse: () => allJadwal.first,
       );
 
-      setState(() {
-        JadwalService.instance.markHadir(jadwal.id, result['photoPath']);
-        // Refresh UI
-      });
+      // Mark hadir lokal agar UI langsung update
+      JadwalService.instance.markHadir(jadwal.id, result['photoPath']);
+
+      // Fetch rekap terbaru dari API agar dashboard juga terupdate
+      await JadwalService.instance.fetchRekapKehadiran();
+
+      // Trigger rebuild untuk update badge greeting card
+      if (mounted) {
+        setState(() {});
+      }
 
       // Show success snackbar
       if (mounted) {
